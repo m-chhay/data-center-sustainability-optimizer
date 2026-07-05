@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useGameState } from '../hooks/useGameState';
+import { useGameState, getQty } from '../hooks/useGameState';
 import { UPG, SIZES, CPS, REGIONS, PEERS_PUE, PEERS_WUE } from '../utils/constants';
 
 const MONO = 'font-mono';
@@ -30,6 +30,39 @@ const CARD_BG = 'bg-white dark:bg-slate-900';
 const CHIP_BG = 'bg-slate-50 dark:bg-slate-800';
 const PAGE_BG = 'bg-slate-50 dark:bg-slate-950';
 
+// Brand accent. White text on a solid fill needs 4.5:1 — emerald-600 only
+// gets to 3.77:1 (fails), emerald-700 clears 5.48:1. So every solid CTA
+// button uses emerald-700 in both themes; the brighter emerald-400/500
+// range is for borders and badge accents, not for white-text fills, where
+// they measure 1.9–2.5:1 and fail outright.
+const BRAND_SOLID = 'bg-emerald-700 hover:bg-emerald-800';
+const BRAND_TEXT = 'text-emerald-700 dark:text-emerald-400';
+
+// ── Category color system ──
+// The spec named 3 categories (cooling, software, structural). The actual
+// catalog has 7 once you count power (solar, battery), water (Greywater
+// Reclamation), compute density (the AI rack), and telemetry (the IoT
+// sensor grid) — those four colors aren't in the spec, I picked them.
+// Every border shade below is verified at 3:1+ against its background in
+// both themes; sky-500/amber-500/teal-500/lime-500 all failed that check on
+// white (2.0–2.8:1), so those four categories use darker 600/700 shades in
+// light mode specifically, not just "the -500 for everything" pattern the
+// other categories use. Sensors deliberately isn't emerald, to keep it
+// visually distinct from the brand accent.
+const CATEGORY_STYLES = {
+  cooling: { border: 'border-sky-600 dark:border-sky-400', badge: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' },
+  software: { border: 'border-indigo-500 dark:border-indigo-400', badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' },
+  structural: { border: 'border-zinc-500 dark:border-zinc-400', badge: 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200' },
+  power: { border: 'border-amber-700 dark:border-amber-400', badge: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' },
+  water: { border: 'border-teal-600 dark:border-teal-400', badge: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300' },
+  compute: { border: 'border-slate-600 dark:border-slate-400', badge: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200' },
+  sensors: { border: 'border-lime-700 dark:border-lime-400', badge: 'bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300' },
+};
+
+function categoryStyle(category) {
+  return CATEGORY_STYLES[category] || { border: BORDER_STRONG, badge: `${CHIP_BG} ${TEXT_MUTED}` };
+}
+
 function formatUSD(n) {
   const sign = n < 0 ? '-' : '';
   const abs = Math.abs(n);
@@ -46,10 +79,11 @@ function tierClasses(tier) {
 
 function aggregateUpgrades(upgrades) {
   const counts = upgrades.reduce((acc, upgrade) => {
+    const units = upgrade.qty || 1;
     if (!acc[upgrade.id]) {
-      acc[upgrade.id] = { ...upgrade, count: 1 };
+      acc[upgrade.id] = { ...upgrade, count: units };
     } else {
-      acc[upgrade.id].count += 1;
+      acc[upgrade.id].count += units;
     }
     return acc;
   }, {});
@@ -97,6 +131,13 @@ function ThemeToggle({ theme, onToggle }) {
 // ════════════════════════════════════════════════════════════════
 
 function WelcomeModal({ onStart }) {
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  function handleStart() {
+    if (dontShowAgain) localStorage.setItem('hideWelcome', 'true');
+    onStart();
+  }
+
   return (
     <div
       role="dialog"
@@ -105,7 +146,7 @@ function WelcomeModal({ onStart }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
       <div className={`w-full max-w-md rounded-xl ${CARD_BG} border ${BORDER_STRONG} p-8 shadow-xl`}>
-        <div className={`${MONO} text-xs uppercase tracking-widest text-indigo-600 dark:text-indigo-400`}>
+        <div className={`${MONO} text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400`}>
           Facility Configuration Objective
         </div>
         <h1 id="welcome-heading" className={`mt-2 text-xl font-semibold ${TEXT_PRIMARY}`}>
@@ -115,9 +156,18 @@ function WelcomeModal({ onStart }) {
           This tool models a sustainability upgrade path for a mid-size facility. The objective is 100% decarbonization
           and a reduced PUE, within a $30.00M CapEx budget.
         </p>
+        <label className={`mt-4 flex items-center gap-2 text-sm ${TEXT_BODY}`}>
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-400"
+          />
+          Don't show this again
+        </label>
         <button
-          onClick={onStart}
-          className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          onClick={handleStart}
+          className="mt-4 w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-800"
         >
           Begin Configuration
         </button>
@@ -169,6 +219,37 @@ function TabBar({ activeTab, onChange, themeToggle }) {
 // Facility size + carbon price + constraints
 // ════════════════════════════════════════════════════════════════
 
+function ResetButton({ onReset }) {
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!confirming) return;
+    const timer = setTimeout(() => setConfirming(false), 3000);
+    return () => clearTimeout(timer);
+  }, [confirming]);
+
+  function handleClick() {
+    if (confirming) {
+      onReset();
+      setConfirming(false);
+    } else {
+      setConfirming(true);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`ml-auto rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${confirming
+          ? 'bg-rose-700 text-white hover:bg-rose-800'
+          : `${TEXT_MUTED} hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950 dark:hover:text-rose-300`
+        }`}
+    >
+      {confirming ? 'Click again to confirm' : 'Reset simulation'}
+    </button>
+  );
+}
+
 function ControlBar({ state, actions, financials, targetAchievedPct }) {
   const overBudget = financials.capex > state.budgetLimit;
   const targetMet = targetAchievedPct >= 100;
@@ -185,7 +266,7 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                 onClick={() => actions.setSize(i)}
                 aria-pressed={state.sizeIdx === i}
                 className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${state.sizeIdx === i
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-emerald-700 text-white'
                     : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
               >
@@ -205,7 +286,7 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                 onClick={() => actions.setCarbonPrice(i)}
                 aria-pressed={state.carbonPriceIdx === i}
                 className={`${MONO} rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${state.carbonPriceIdx === i
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-emerald-700 text-white'
                     : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
               >
@@ -215,12 +296,7 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
           </div>
         </div>
 
-        <button
-          onClick={actions.reset}
-          className={`ml-auto rounded-lg px-3.5 py-2 text-sm font-medium ${TEXT_MUTED} transition-colors hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950 dark:hover:text-rose-300`}
-        >
-          Reset simulation
-        </button>
+        <ResetButton onReset={actions.reset} />
       </div>
 
       <div className={`flex flex-wrap items-end gap-6 border-t ${BORDER_SUBTLE} pt-4`}>
@@ -298,25 +374,27 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
 // Upgrade pool — draggable, keyboard-operable cards
 // ════════════════════════════════════════════════════════════════
 
-function UpgradeCard({ upgrade, isSelected, isDragging, onSelect, onDragStart, onDragEnd }) {
+function UpgradeCard({ upgrade, isSelected, isDragging, qty, onQtyChange, disabled, disabledReason, onSelect, onDragStart, onDragEnd }) {
+  const cat = categoryStyle(upgrade.category);
+
   return (
-    <button
-      type="button"
-      draggable="true"
-      onDragStart={(e) => onDragStart(e, upgrade)}
+    <div
+      draggable={!disabled}
+      onDragStart={(e) => onDragStart(e, upgrade, qty)}
       onDragEnd={onDragEnd}
-      onClick={() => onSelect(upgrade.id)}
-      aria-pressed={isSelected}
-      aria-label={`${upgrade.name}. ${formatUSD(upgrade.capex)} capital expenditure, ${formatUSD(upgrade.sav)} annual savings, ${upgrade.co2} tons CO2 impact. ${isSelected ? 'Currently selected.' : 'Select, then choose a facility slot to deploy.'}`}
-      className={`w-full cursor-grab rounded-xl border p-3.5 text-left transition-all active:cursor-grabbing ${isDragging
+      className={`rounded-xl border p-3.5 transition-all ${isDragging
           ? `${BORDER_SUBTLE} opacity-40`
-          : isSelected
-            ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
-            : `${BORDER_STRONG} ${CARD_BG} shadow-sm hover:shadow-md`
+          : disabled
+            ? `${BORDER_SUBTLE} ${CHIP_BG} opacity-60`
+            : isSelected
+              ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
+              : `${cat.border} ${CARD_BG} shadow-sm hover:shadow-md`
         }`}
     >
-      <div className="pointer-events-none flex items-center justify-between">
-        <span className={`text-sm font-medium ${isSelected ? '' : TEXT_PRIMARY}`}>{upgrade.name}</span>
+      <div className="mb-2 flex items-center justify-between">
+        <span className={`${MONO} rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isSelected ? 'bg-white/20 text-white' : cat.badge}`}>
+          {upgrade.category}
+        </span>
         <span
           className={`${MONO} flex h-6 w-10 items-center justify-center rounded-md text-[10px] font-semibold`}
           style={{ background: upgrade.bg, color: upgrade.tc }}
@@ -324,26 +402,80 @@ function UpgradeCard({ upgrade, isSelected, isDragging, onSelect, onDragStart, o
           {upgrade.abbr}
         </span>
       </div>
-      <div
-        className={`${MONO} pointer-events-none mt-2 flex gap-3 text-[11px] ${isSelected ? 'text-white/80' : TEXT_MUTED
+
+      <button
+        type="button"
+        onClick={() => !disabled && onSelect(upgrade.id)}
+        disabled={disabled}
+        aria-pressed={isSelected}
+        aria-label={`${upgrade.name}, quantity ${qty}. ${formatUSD(upgrade.capex * qty)} capital expenditure, ${formatUSD(upgrade.sav * qty)} annual savings, ${upgrade.co2 * qty} tons CO2 impact. ${disabled ? disabledReason : isSelected ? 'Currently selected.' : 'Select, then choose a facility slot to deploy.'
           }`}
+        title={disabled ? disabledReason : undefined}
+        className={`w-full cursor-grab text-left disabled:cursor-not-allowed ${isDragging || disabled ? '' : 'active:cursor-grabbing'}`}
       >
-        <span>{formatUSD(upgrade.capex)} capex</span>
-        <span>{formatUSD(upgrade.sav)}/yr</span>
-        <span>{upgrade.co2}t CO₂</span>
+        <span className={`pointer-events-none text-sm font-medium ${isSelected ? '' : TEXT_PRIMARY}`}>{upgrade.name}</span>
+        <div
+          className={`${MONO} pointer-events-none mt-2 flex gap-3 text-[11px] ${isSelected ? 'text-white/80' : TEXT_MUTED
+            }`}
+        >
+          <span>{formatUSD(upgrade.capex * qty)} capex</span>
+          <span>{formatUSD(upgrade.sav * qty)}/yr</span>
+          <span>{upgrade.co2 * qty}t CO₂</span>
+        </div>
+        <p className={`pointer-events-none mt-1.5 text-xs leading-snug ${isSelected ? 'text-white/90' : TEXT_BODY}`}>
+          {upgrade.why}
+        </p>
+      </button>
+
+      <div className="mt-2.5 flex items-center justify-end">
+        {/* Sits inside a draggable parent. A mousedown here can get read as
+            the start of a drag before React's onClick ever fires — stopping
+            propagation on mousedown is what actually prevents that, not
+            stopping propagation on click, which fires too late. */}
+        <div
+          role="group"
+          aria-label={`${upgrade.name} quantity`}
+          draggable={false}
+          onMouseDown={(e) => e.stopPropagation()}
+          onDragStart={(e) => e.stopPropagation()}
+          className={`flex items-center gap-1 rounded-lg border ${isSelected ? 'border-white/30' : BORDER_SUBTLE}`}
+        >
+          <button
+            type="button"
+            onClick={() => onQtyChange(-1)}
+            disabled={qty <= 1}
+            aria-label={`Decrease quantity of ${upgrade.name}`}
+            className={`${MONO} px-2 py-0.5 text-xs disabled:opacity-40 ${isSelected ? 'text-white' : TEXT_BODY}`}
+          >
+            −
+          </button>
+          <span className={`${MONO} min-w-[1.5rem] text-center text-xs ${isSelected ? 'text-white' : TEXT_PRIMARY}`}>
+            {qty}
+          </span>
+          <button
+            type="button"
+            onClick={() => onQtyChange(1)}
+            aria-label={`Increase quantity of ${upgrade.name}`}
+            className={`${MONO} px-2 py-0.5 text-xs ${isSelected ? 'text-white' : TEXT_BODY}`}
+          >
+            +
+          </button>
+        </div>
       </div>
-      <p className={`pointer-events-none mt-1.5 text-xs leading-snug ${isSelected ? 'text-white/90' : TEXT_BODY}`}>
-        {upgrade.why}
-      </p>
-    </button>
+      {disabled && (
+        <p role="status" className="mt-1.5 text-[11px] font-medium text-rose-700 dark:text-rose-400">
+          {disabledReason}
+        </p>
+      )}
+    </div>
   );
 }
 
-function UpgradePool({ selectedId, draggingId, onSelect, onDragStart, onDragEnd }) {
+function UpgradePool({ state, actions, financials, sizeFm, gridFull, selectedId, draggingId, onSelect, onDragStart, onDragEnd }) {
   return (
     <section
       aria-label="Upgrade catalog"
-      className={`flex w-72 flex-shrink-0 flex-col rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-4 shadow-sm`}
+      className={`flex w-full flex-col rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-4 shadow-sm lg:w-72 lg:flex-shrink-0`}
     >
       <div className="mb-3">
         <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Upgrade catalog</h2>
@@ -352,17 +484,32 @@ function UpgradePool({ selectedId, draggingId, onSelect, onDragStart, onDragEnd 
         </p>
       </div>
       <div className="flex-1 space-y-2.5 overflow-y-auto">
-        {UPG.map((u) => (
-          <UpgradeCard
-            key={u.id}
-            upgrade={u}
-            isSelected={selectedId === u.id}
-            isDragging={draggingId === u.id}
-            onSelect={onSelect}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-          />
-        ))}
+        {UPG.map((u) => {
+          const qty = getQty(state, u.id);
+          const prospectiveCapex = financials.upgradeCapex + u.capex * qty * sizeFm + state.slotExpansionCost;
+          const overBudget = prospectiveCapex > state.budgetLimit;
+          const disabled = overBudget || gridFull;
+          const disabledReason = gridFull
+            ? 'No empty slots remaining.'
+            : overBudget
+              ? `${qty}x would exceed the configured CapEx budget.`
+              : null;
+          return (
+            <UpgradeCard
+              key={u.id}
+              upgrade={u}
+              qty={qty}
+              onQtyChange={(delta) => actions.setQty(u.id, delta)}
+              disabled={disabled}
+              disabledReason={disabledReason}
+              isSelected={selectedId === u.id}
+              isDragging={draggingId === u.id}
+              onSelect={onSelect}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -443,7 +590,8 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
       return;
     }
     if (!selectedId) return;
-    actions.placeUpgrade(index, selectedId);
+    const qty = getQty(state, selectedId);
+    actions.placeUpgrade(index, selectedId, qty);
     onPlaced();
   }
 
@@ -478,9 +626,11 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
     setDropTargetIndex(null);
     setInvalidTarget(null);
     try {
-      const upgradeType = e.dataTransfer.getData('text/plain');
-      if (!upgradeType || state.grid[index] !== null) return;
-      actions.placeUpgrade(index, upgradeType);
+      const raw = e.dataTransfer.getData('text/plain');
+      if (!raw || state.grid[index] !== null) return;
+      const { id: upgradeType, qty } = JSON.parse(raw);
+      if (!upgradeType) return;
+      actions.placeUpgrade(index, upgradeType, qty);
       onPlaced();
     } catch (err) {
       console.error('Drop failed:', err);
@@ -517,7 +667,7 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
         </div>
       </div>
 
-      <div role="grid" aria-label="Facility rack slots" className="grid grid-cols-4 gap-3">
+      <div role="grid" aria-label="Facility rack slots" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {state.grid.map((upgrade, i) => (
           <GridSlot
             key={i}
@@ -583,7 +733,7 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
   return (
     <aside
       aria-label="Facility metrics"
-      className={`w-80 flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}
+      className={`w-full flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm lg:w-80`}
     >
       <div>
         <h2 className={`mb-3 text-sm font-semibold ${TEXT_PRIMARY}`}>Efficiency</h2>
@@ -643,9 +793,11 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
 
 function SandboxView({ state, actions, metrics, financials, targetAchievedPct, selectedUpgradeId, setSelectedUpgradeId }) {
   const [draggingId, setDraggingId] = useState(null);
+  const sizeFm = SIZES[state.sizeIdx].fm;
+  const gridFull = state.grid.filter((c) => c !== null).length >= state.gridSlots;
 
-  function handleDragStart(e, upgrade) {
-    e.dataTransfer.setData('text/plain', upgrade.id);
+  function handleDragStart(e, upgrade, qty) {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ id: upgrade.id, qty }));
     e.dataTransfer.effectAllowed = 'move';
     setDraggingId(upgrade.id);
   }
@@ -655,8 +807,13 @@ function SandboxView({ state, actions, metrics, financials, targetAchievedPct, s
   }
 
   return (
-    <div className="flex flex-1 gap-6 overflow-hidden">
+    <div className="flex flex-1 flex-col gap-6 overflow-y-auto lg:flex-row lg:overflow-hidden">
       <UpgradePool
+        state={state}
+        actions={actions}
+        financials={financials}
+        sizeFm={sizeFm}
+        gridFull={gridFull}
         selectedId={selectedUpgradeId}
         draggingId={draggingId}
         onSelect={setSelectedUpgradeId}
@@ -938,21 +1095,148 @@ function downloadExportPayload(payload, sizeLabel) {
   URL.revokeObjectURL(url);
 }
 
+function PrintBrief({ state, metrics, financials, placedUpgrades, sizeLabel, regionLabel, hasUpgrades, breakEven }) {
+  return (
+    <div className="mx-auto max-w-4xl p-8 text-black">
+      <div className="mb-6 border-b-2 border-black pb-4">
+        <h1 className="text-lg font-bold tracking-tight">
+          EXECUTIVE LIFECYCLE BRIEF: ENTERPRISE DATA CENTER SUSTAINABILITY INITIATIVE
+        </h1>
+        <p className="mt-1 text-sm">
+          Region: {regionLabel} &nbsp;|&nbsp; Facility Size: {sizeLabel}
+        </p>
+      </div>
+
+      {!hasUpgrades ? (
+        <p className="text-sm">No upgrades deployed. Return to the Sandbox tab to build a configuration first.</p>
+      ) : (
+        <>
+          <section className="mb-6">
+            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
+              Capital Investment Profile
+            </h2>
+            <table className="w-full text-sm">
+              <tbody>
+                <tr>
+                  <td className="py-1">Total CapEx Deployed</td>
+                  <td className="py-1 text-right font-semibold">{formatUSD(financials.capex)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1">Remaining Baseline Budget Allocation</td>
+                  <td className="py-1 text-right font-semibold">{formatUSD(state.budgetLimit - financials.capex)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section className="mb-6">
+            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
+              Operational Velocity Profile
+            </h2>
+            <table className="w-full text-sm">
+              <tbody>
+                <tr>
+                  <td className="py-1">Total Annualized OpEx Savings</td>
+                  <td className="py-1 text-right font-semibold">{formatUSD(financials.annualSavings)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1">Final Facility PUE</td>
+                  <td className="py-1 text-right font-semibold">{metrics.pue.value}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section className="mb-6">
+            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
+              Amortization Milestone
+            </h2>
+            <p className="text-sm">
+              Break-Even Threshold: <span className="font-semibold">{breakEven}</span>
+              {financials.breakEvenYears && (
+                <span className="text-xs"> (Total CapEx ÷ Annualized OpEx Savings)</span>
+              )}
+            </p>
+          </section>
+
+          <section className="mb-6">
+            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
+              10-Year Financial Forecast
+            </h2>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-black">
+                  <th scope="col" className="py-1 text-left font-semibold">Year</th>
+                  <th scope="col" className="py-1 text-right font-semibold">Cumulative Net Return</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financials.yearByYear.map((y) => (
+                  <tr key={y.year} className="border-b border-slate-300">
+                    <td className="py-1">{y.year}</td>
+                    <td className="py-1 text-right">{formatUSD(y.cumulativeNet)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
+              Infrastructure Bill of Materials
+            </h2>
+            <ul className="text-sm">
+              {aggregateUpgrades(placedUpgrades).map((u) => (
+                <li key={u.id} className="border-b border-slate-200 py-1">
+                  {u.name}{u.count > 1 ? ` x${u.count}` : ''}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="mt-6 border-t border-black pt-4">
+            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide">
+              Analytical Modeling Assumptions &amp; Methodology
+            </h2>
+            <ul className="space-y-1 text-xs leading-relaxed">
+              <li>• Facility utilization rate modeled at a static 70% baseline capacity.</li>
+              <li>• Base cooling infrastructure overhead calculated at 40% of baseline operational expenses (OpEx).</li>
+              <li>
+                • Regional utility rates, grid carbon intensity multipliers, and structural regulatory fees anchored
+                to projected 2026 domestic energy data.
+              </li>
+            </ul>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabel, activeRisks }) {
   const hasUpgrades = placedUpgrades.length > 0;
   const regionLabel = REGIONS.find((r) => r.id === state.region)?.label || state.region;
   const breakEven = financials.breakEvenYears ? `${financials.breakEvenYears.toFixed(1)} years` : 'beyond the 10-year window';
   const upgradeNames = placedUpgrades.map((u) => u.name).join(', ');
+  const [showPreview, setShowPreview] = useState(false);
 
   function handleDownload() {
     const payload = buildExportPayload({ state, metrics, financials, placedUpgrades, sizeLabel });
     downloadExportPayload(payload, sizeLabel);
   }
 
+  const briefProps = { state, metrics, financials, placedUpgrades, sizeLabel, regionLabel, hasUpgrades, breakEven };
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex items-center justify-end gap-2 print:hidden">
+          <button
+            onClick={() => setShowPreview((v) => !v)}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium shadow-sm ${BORDER_STRONG} ${CARD_BG} text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800`}
+          >
+            {showPreview ? 'Back to Memo' : 'Preview Print Layout'}
+          </button>
           <button
             onClick={handleDownload}
             disabled={!hasUpgrades}
@@ -965,206 +1249,107 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
           </button>
           <button
             onClick={() => window.print()}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-800"
           >
             Print / Export Report
           </button>
         </div>
-        <section
-          aria-label="Business case memo"
-          className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-10 shadow-sm print:hidden`}
-        >
-          <div className={`mb-8 border-b ${BORDER_SUBTLE} pb-6`}>
-            <div className={`${MONO} text-xs uppercase tracking-widest ${TEXT_MUTED}`}>
-              Internal Memo — Sustainability &amp; Infrastructure
+
+        {showPreview ? (
+          // Same component that renders inside the real hidden print:block
+          // wrapper below — this is a live look at the actual print output,
+          // not a second copy that can quietly drift out of sync with it.
+          <div className={`rounded-xl border ${BORDER_STRONG} bg-white shadow-sm print:hidden`}>
+            <div className="border-b border-slate-200 bg-slate-100 px-4 py-2 text-xs font-medium text-slate-600">
+              Print preview — this is what "Print / Export Report" produces
             </div>
-            <h1 className={`mt-2 text-2xl font-semibold ${TEXT_PRIMARY}`}>
-              {sizeLabel} Facility Sustainability Investment
-            </h1>
+            <PrintBrief {...briefProps} />
           </div>
-
-          {!hasUpgrades ? (
-            <p className={`text-sm ${TEXT_MUTED}`}>
-              Deploy at least one upgrade in the Sandbox tab to generate a business case.
-            </p>
-          ) : (
-            <div className={`space-y-6 text-sm leading-relaxed ${TEXT_BODY}`}>
-              <p>
-                This memo outlines the proposed sustainability upgrade path for the {sizeLabel.toLowerCase()} facility,
-                covering {upgradeNames}.
-              </p>
-
-              <div>
-                <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
-                  Financial summary
-                </h2>
-                <div className="grid grid-cols-4 gap-3">
-                  <MetricCard label="Total CapEx" value={formatUSD(financials.capex)} />
-                  <MetricCard label="Annual savings" value={formatUSD(financials.annualSavings)} />
-                  <MetricCard label="Break-even" value={breakEven} />
-                  <MetricCard label="10-yr net" value={formatUSD(financials.netAtYear10)} />
-                </div>
+        ) : (
+          <section
+            aria-label="Business case memo"
+            className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-10 shadow-sm print:hidden`}
+          >
+            <div className={`mb-8 border-b ${BORDER_SUBTLE} pb-6`}>
+              <div className={`${MONO} text-xs uppercase tracking-widest ${TEXT_MUTED}`}>
+                Internal Memo — Sustainability &amp; Infrastructure
               </div>
-
-              <p>
-                Capital outlay of {formatUSD(financials.capex)} returns {formatUSD(financials.annualSavings)} per
-                year in energy and operational savings, reaching break-even at {breakEven}. Over a ten-year horizon,
-                the plan nets {formatUSD(financials.netAtYear10)}.
-              </p>
-
-              <div>
-                <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
-                  Efficiency &amp; emissions
-                </h2>
-                <p>
-                  The facility moves to a PUE of {metrics.pue.value} and WUE of {metrics.wue.value}, cutting annual
-                  emissions by {metrics.co2} metric tons of CO₂, equivalent to {metrics.trees.toLocaleString()}{' '}
-                  tree-seedlings grown over ten years.
-                </p>
-              </div>
-
-              <div>
-                <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
-                  Recommendation
-                </h2>
-                <p>
-                  Proceed with the phased rollout, prioritizing Phase 1 items for fastest payback before committing
-                  capital to longer-lead infrastructure work.
-                </p>
-              </div>
-
-              <div>
-                <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
-                  Enterprise Operational Risk &amp; Regulatory Audit
-                </h2>
-                <RiskAuditSection risks={activeRisks} />
-              </div>
-
-              <ModelingAssumptions />
+              <h1 className={`mt-2 text-2xl font-semibold ${TEXT_PRIMARY}`}>
+                {sizeLabel} Facility Sustainability Investment
+              </h1>
             </div>
-          )}
-        </section>
+
+            {!hasUpgrades ? (
+              <p className={`text-sm ${TEXT_MUTED}`}>
+                Deploy at least one upgrade in the Sandbox tab to generate a business case.
+              </p>
+            ) : (
+              <div className={`space-y-6 text-sm leading-relaxed ${TEXT_BODY}`}>
+                <p>
+                  This memo outlines the proposed sustainability upgrade path for the {sizeLabel.toLowerCase()} facility,
+                  covering {upgradeNames}.
+                </p>
+
+                <div>
+                  <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
+                    Financial summary
+                  </h2>
+                  <div className="grid grid-cols-4 gap-3">
+                    <MetricCard label="Total CapEx" value={formatUSD(financials.capex)} />
+                    <MetricCard label="Annual savings" value={formatUSD(financials.annualSavings)} />
+                    <MetricCard label="Break-even" value={breakEven} />
+                    <MetricCard label="10-yr net" value={formatUSD(financials.netAtYear10)} />
+                  </div>
+                </div>
+
+                <p>
+                  Capital outlay of {formatUSD(financials.capex)} returns {formatUSD(financials.annualSavings)} per
+                  year in energy and operational savings, reaching break-even at {breakEven}. Over a ten-year horizon,
+                  the plan nets {formatUSD(financials.netAtYear10)}.
+                </p>
+
+                <div>
+                  <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
+                    Efficiency &amp; emissions
+                  </h2>
+                  <p>
+                    The facility moves to a PUE of {metrics.pue.value} and WUE of {metrics.wue.value}, cutting annual
+                    emissions by {metrics.co2} metric tons of CO₂, equivalent to {metrics.trees.toLocaleString()}{' '}
+                    tree-seedlings grown over ten years.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
+                    Recommendation
+                  </h2>
+                  <p>
+                    Proceed with the phased rollout, prioritizing Phase 1 items for fastest payback before committing
+                    capital to longer-lead infrastructure work.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
+                    Enterprise Operational Risk &amp; Regulatory Audit
+                  </h2>
+                  <RiskAuditSection risks={activeRisks} />
+                </div>
+
+                <ModelingAssumptions />
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       {/* Print-only layout. Hidden on screen, fills the page on print.
-          The on-screen card above is print:hidden so these two never
-          both show up on paper at once. Deliberately NOT theme-aware —
-          paper is always black text on white regardless of the on-screen
-          theme, so no dark: classes get added anywhere in this block. */}
+          Same PrintBrief component used above for the on-screen preview —
+          one source of truth, so preview and real output can't drift apart.
+          Deliberately NOT theme-aware — paper is always black text on white
+          regardless of the on-screen theme, so no dark: classes apply here. */}
       <div className="hidden print:block">
-        <div className="mx-auto max-w-4xl p-8 text-black">
-          <div className="mb-6 border-b-2 border-black pb-4">
-            <h1 className="text-lg font-bold tracking-tight">
-              EXECUTIVE LIFECYCLE BRIEF: ENTERPRISE DATA CENTER SUSTAINABILITY INITIATIVE
-            </h1>
-            <p className="mt-1 text-sm">
-              Region: {regionLabel} &nbsp;|&nbsp; Facility Size: {sizeLabel}
-            </p>
-          </div>
-
-          {!hasUpgrades ? (
-            <p className="text-sm">No upgrades deployed. Return to the Sandbox tab to build a configuration first.</p>
-          ) : (
-            <>
-              <section className="mb-6">
-                <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-                  Capital Investment Profile
-                </h2>
-                <table className="w-full text-sm">
-                  <tbody>
-                    <tr>
-                      <td className="py-1">Total CapEx Deployed</td>
-                      <td className="py-1 text-right font-semibold">{formatUSD(financials.capex)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1">Remaining Baseline Budget Allocation</td>
-                      <td className="py-1 text-right font-semibold">{formatUSD(state.budgetLimit - financials.capex)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </section>
-
-              <section className="mb-6">
-                <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-                  Operational Velocity Profile
-                </h2>
-                <table className="w-full text-sm">
-                  <tbody>
-                    <tr>
-                      <td className="py-1">Total Annualized OpEx Savings</td>
-                      <td className="py-1 text-right font-semibold">{formatUSD(financials.annualSavings)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1">Final Facility PUE</td>
-                      <td className="py-1 text-right font-semibold">{metrics.pue.value}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </section>
-
-              <section className="mb-6">
-                <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-                  Amortization Milestone
-                </h2>
-                <p className="text-sm">
-                  Break-Even Threshold: <span className="font-semibold">{breakEven}</span>
-                  {financials.breakEvenYears && (
-                    <span className="text-xs"> (Total CapEx ÷ Annualized OpEx Savings)</span>
-                  )}
-                </p>
-              </section>
-
-              <section className="mb-6">
-                <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-                  10-Year Financial Forecast
-                </h2>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-black">
-                      <th scope="col" className="py-1 text-left font-semibold">Year</th>
-                      <th scope="col" className="py-1 text-right font-semibold">Cumulative Net Return</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financials.yearByYear.map((y) => (
-                      <tr key={y.year} className="border-b border-slate-300">
-                        <td className="py-1">{y.year}</td>
-                        <td className="py-1 text-right">{formatUSD(y.cumulativeNet)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-
-              <section>
-                <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-                  Infrastructure Bill of Materials
-                </h2>
-                <ul className="text-sm">
-                  {aggregateUpgrades(placedUpgrades).map((u) => (
-                    <li key={u.id} className="border-b border-slate-200 py-1">
-                      {u.name}{u.count > 1 ? ` x${u.count}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="mt-6 border-t border-black pt-4">
-                <h2 className="mb-2 text-xs font-bold uppercase tracking-wide">
-                  Analytical Modeling Assumptions &amp; Methodology
-                </h2>
-                <ul className="space-y-1 text-xs leading-relaxed">
-                  <li>• Facility utilization rate modeled at a static 70% baseline capacity.</li>
-                  <li>• Base cooling infrastructure overhead calculated at 40% of baseline operational expenses (OpEx).</li>
-                  <li>
-                    • Regional utility rates, grid carbon intensity multipliers, and structural regulatory fees anchored
-                    to projected 2026 domestic energy data.
-                  </li>
-                </ul>
-              </section>
-            </>
-          )}
-        </div>
+        <PrintBrief {...briefProps} />
       </div>
     </div>
   );
@@ -1317,7 +1502,34 @@ export default function Page() {
   const [selectedUpgradeId, setSelectedUpgradeId] = useState(null);
   const [activeTab, setActiveTab] = useState('sandbox');
   const [showWelcome, setShowWelcome] = useState(true);
+
+  useEffect(() => {
+    if (localStorage.getItem('hideWelcome') === 'true') setShowWelcome(false);
+  }, []);
   const [theme, setTheme] = useState('light');
+
+  // Read the saved preference once, on mount, and apply it immediately —
+  // this is the actual fix for "toggle ignores clicks." The previous
+  // version toggled a class on a wrapper <div>, which only works if
+  // Tailwind's dark: variant is scoped under that div. Applying the class
+  // to document.documentElement directly is what the dark: variant
+  // actually needs regardless of where in the tree the toggle button lives,
+  // and it's also required for anything rendered outside this component
+  // tree (portals, browser-native UI) to respect the theme.
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') {
+      setTheme(saved);
+      document.documentElement.classList.toggle('dark', saved === 'dark');
+    }
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    localStorage.setItem('theme', next);
+  }
 
   const sizeLabel = SIZES[state.sizeIdx].label;
 
@@ -1330,63 +1542,61 @@ export default function Page() {
   }, [placementError, actions]);
 
   return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className={`flex h-screen flex-col gap-4 ${PAGE_BG} p-4 font-sans ${TEXT_PRIMARY}`}>
-        {showWelcome && <WelcomeModal onStart={() => setShowWelcome(false)} />}
+    <main className={`flex h-screen flex-col gap-3 ${PAGE_BG} p-3 font-sans ${TEXT_PRIMARY}`}>
+      {showWelcome && <WelcomeModal onStart={() => setShowWelcome(false)} />}
 
-        <TabBar
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          themeToggle={<ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />}
-        />
+      <TabBar
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        themeToggle={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
+      />
 
-        <RejectionBanner message={placementError} onDismiss={actions.clearPlacementError} />
-        <CurtailmentBanner message={curtailmentWarning} />
+      <RejectionBanner message={placementError} onDismiss={actions.clearPlacementError} />
+      <CurtailmentBanner message={curtailmentWarning} />
 
-        <div id="tabpanel-sandbox" role="tabpanel" aria-labelledby="tab-sandbox" hidden={activeTab !== 'sandbox'} className="contents">
-          {activeTab === 'sandbox' && (
-            <>
-              <ControlBar state={state} actions={actions} financials={financials} targetAchievedPct={targetAchievedPct} />
-              <RiskAuditBadge activeRisks={activeRisks} onViewResults={() => setActiveTab('results')} />
-              <SandboxView
-                state={state}
-                actions={actions}
-                metrics={metrics}
-                financials={financials}
-                targetAchievedPct={targetAchievedPct}
-                selectedUpgradeId={selectedUpgradeId}
-                setSelectedUpgradeId={setSelectedUpgradeId}
-              />
-            </>
-          )}
-        </div>
-
-        <div id="tabpanel-results" role="tabpanel" aria-labelledby="tab-results" hidden={activeTab !== 'results'} className="contents">
-          {activeTab === 'results' && (
-            <ResultsView
-              roadmap={roadmap}
-              financials={financials}
-              metrics={metrics}
-              pueBenchmark={pueBenchmark}
-              wueBenchmark={wueBenchmark}
-              activeRisks={activeRisks}
-            />
-          )}
-        </div>
-
-        <div id="tabpanel-business-case" role="tabpanel" aria-labelledby="tab-business-case" hidden={activeTab !== 'business-case'} className="contents">
-          {activeTab === 'business-case' && (
-            <BusinessCaseView
+      <div id="tabpanel-sandbox" role="tabpanel" aria-labelledby="tab-sandbox" hidden={activeTab !== 'sandbox'} className="contents">
+        {activeTab === 'sandbox' && (
+          <>
+            <ControlBar state={state} actions={actions} financials={financials} targetAchievedPct={targetAchievedPct} />
+            <RiskAuditBadge activeRisks={activeRisks} onViewResults={() => setActiveTab('results')} />
+            <SandboxView
               state={state}
+              actions={actions}
               metrics={metrics}
               financials={financials}
-              placedUpgrades={placedUpgrades}
-              sizeLabel={sizeLabel}
-              activeRisks={activeRisks}
+              targetAchievedPct={targetAchievedPct}
+              selectedUpgradeId={selectedUpgradeId}
+              setSelectedUpgradeId={setSelectedUpgradeId}
             />
-          )}
-        </div>
-      </main>
-    </div>
+          </>
+        )}
+      </div>
+
+      <div id="tabpanel-results" role="tabpanel" aria-labelledby="tab-results" hidden={activeTab !== 'results'} className="contents">
+        {activeTab === 'results' && (
+          <ResultsView
+            roadmap={roadmap}
+            financials={financials}
+            metrics={metrics}
+            pueBenchmark={pueBenchmark}
+            wueBenchmark={wueBenchmark}
+            activeRisks={activeRisks}
+          />
+        )}
+      </div>
+
+      <div id="tabpanel-business-case" role="tabpanel" aria-labelledby="tab-business-case" hidden={activeTab !== 'business-case'} className="contents">
+        {activeTab === 'business-case' && (
+          <BusinessCaseView
+            state={state}
+            metrics={metrics}
+            financials={financials}
+            placedUpgrades={placedUpgrades}
+            sizeLabel={sizeLabel}
+            activeRisks={activeRisks}
+          />
+        )}
+      </div>
+    </main>
   );
 }

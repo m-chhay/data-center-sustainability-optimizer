@@ -200,8 +200,8 @@ function TabBar({ activeTab, onChange, themeToggle }) {
               aria-controls={`tabpanel-${t.id}`}
               onClick={() => onChange(t.id)}
               className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === t.id
-                  ? `${CHIP_BG} ${TEXT_PRIMARY}`
-                  : `${TEXT_MUTED} hover:text-slate-900 dark:hover:text-slate-100`
+                ? `${CHIP_BG} ${TEXT_PRIMARY}`
+                : `${TEXT_MUTED} hover:text-slate-900 dark:hover:text-slate-100`
                 }`}
             >
               {t.label}
@@ -241,8 +241,8 @@ function ResetButton({ onReset }) {
     <button
       onClick={handleClick}
       className={`ml-auto rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${confirming
-          ? 'bg-rose-700 text-white hover:bg-rose-800'
-          : `${TEXT_MUTED} hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950 dark:hover:text-rose-300`
+        ? 'bg-rose-700 text-white hover:bg-rose-800'
+        : `${TEXT_MUTED} hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950 dark:hover:text-rose-300`
         }`}
     >
       {confirming ? 'Click again to confirm' : 'Reset simulation'}
@@ -266,8 +266,8 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                 onClick={() => actions.setSize(i)}
                 aria-pressed={state.sizeIdx === i}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${state.sizeIdx === i
-                    ? 'bg-emerald-700 text-white'
-                    : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
+                  ? 'bg-emerald-700 text-white'
+                  : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
               >
                 {s.label}
@@ -286,8 +286,8 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                 onClick={() => actions.setCarbonPrice(i)}
                 aria-pressed={state.carbonPriceIdx === i}
                 className={`${MONO} rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${state.carbonPriceIdx === i
-                    ? 'bg-emerald-700 text-white'
-                    : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
+                  ? 'bg-emerald-700 text-white'
+                  : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
               >
                 {cp.l}
@@ -349,8 +349,8 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
           <span
             role="status"
             className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${overBudget
-                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
               }`}
           >
             {overBudget ? 'Over budget' : 'Within budget'}
@@ -358,8 +358,8 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
           <span
             role="status"
             className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${targetMet
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                : `${CHIP_BG} ${TEXT_MUTED}`
+              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+              : `${CHIP_BG} ${TEXT_MUTED}`
               }`}
           >
             {targetAchievedPct}% of target achieved
@@ -383,12 +383,12 @@ function UpgradeCard({ upgrade, isSelected, isDragging, qty, onQtyChange, disabl
       onDragStart={(e) => onDragStart(e, upgrade, qty)}
       onDragEnd={onDragEnd}
       className={`rounded-xl border p-3.5 transition-all ${isDragging
-          ? `${BORDER_SUBTLE} opacity-40`
-          : disabled
-            ? `${BORDER_SUBTLE} ${CHIP_BG} opacity-60`
-            : isSelected
-              ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
-              : `${cat.border} ${CARD_BG} shadow-sm hover:shadow-md`
+        ? `${BORDER_SUBTLE} opacity-40`
+        : disabled
+          ? `${BORDER_SUBTLE} ${CHIP_BG} opacity-60`
+          : isSelected
+            ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
+            : `${cat.border} ${CARD_BG} shadow-sm hover:shadow-md`
         }`}
     >
       <div className="mb-2 flex items-center justify-between">
@@ -651,8 +651,8 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
             aria-label="Remove last facility slot"
             title={canShrink ? 'Remove last slot' : 'Cannot remove — last slot is occupied or minimum reached'}
             className={`${MONO} rounded-lg border px-2.5 py-1.5 text-xs font-medium ${canShrink
-                ? `${BORDER_STRONG} ${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
-                : `cursor-not-allowed ${BORDER_SUBTLE} ${TEXT_FAINT}`
+              ? `${BORDER_STRONG} ${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
+              : `cursor-not-allowed ${BORDER_SUBTLE} ${TEXT_FAINT}`
               }`}
           >
             − Slot
@@ -1005,8 +1005,8 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                   <td className="px-4 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${y.isPositive
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                         }`}
                     >
                       {y.isPositive ? 'positive' : 'negative'}
@@ -1336,8 +1336,8 @@ function RiskAuditSection({ risks }) {
             key={risk.id}
             role="alert"
             className={`rounded-xl border p-4 ${isCritical
-                ? 'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                : 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
+              ? 'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
+              : 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
               }`}
           >
             <div className="flex items-start gap-3">
@@ -1426,14 +1426,7 @@ export default function Page() {
   }, []);
   const [theme, setTheme] = useState('light');
 
-  // useLayoutEffect fires before the browser paints the next frame, so this
-  // shrinks the flash window compared to useEffect (which fires after
-  // paint). It does not eliminate it — the server-rendered HTML paints
-  // first, before any client JS runs at all, dark or not. Actually
-  // eliminating FOUC needs a synchronous script in the document head,
-  // before hydration, which lives in layout.js, not this file. Snippet for
-  // that is in the response, not here, since I can't see that file.
-  useLayoutEffect(() => {
+  useEffect(() => {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark' || saved === 'light') {
       setTheme(saved);

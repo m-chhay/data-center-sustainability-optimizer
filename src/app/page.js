@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect } from 'react';
 import { useGameState, getQty } from '../hooks/useGameState';
 import { UPG, SIZES, CPS, REGIONS, PEERS_PUE, PEERS_WUE } from '../utils/constants';
 
@@ -119,7 +119,7 @@ function ThemeToggle({ theme, onToggle }) {
       onClick={onToggle}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-pressed={isDark}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${BORDER_SUBTLE} ${CHIP_BG} text-slate-600 transition-colors hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 print:hidden`}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${BORDER_SUBTLE} ${CHIP_BG} text-slate-600 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900 print:hidden`}
     >
       {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
     </button>
@@ -240,7 +240,7 @@ function ResetButton({ onReset }) {
   return (
     <button
       onClick={handleClick}
-      className={`ml-auto rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${confirming
+      className={`ml-auto rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${confirming
           ? 'bg-rose-700 text-white hover:bg-rose-800'
           : `${TEXT_MUTED} hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950 dark:hover:text-rose-300`
         }`}
@@ -255,17 +255,17 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
   const targetMet = targetAchievedPct >= 100;
 
   return (
-    <section aria-label="Facility configuration controls" className={`space-y-4 rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
-      <div className="flex flex-wrap items-end gap-6">
+    <section aria-label="Facility configuration controls" className={`space-y-2.5 rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4 shadow-md`}>
+      <div className="flex flex-wrap items-end gap-4">
         <div>
-          <div className={`${MONO} mb-2 text-[11px] uppercase tracking-wider ${TEXT_MUTED}`}>Facility size</div>
+          <div className={`${MONO} mb-1 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>Facility size</div>
           <div className="flex gap-1.5" role="group" aria-label="Facility size">
             {SIZES.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => actions.setSize(i)}
                 aria-pressed={state.sizeIdx === i}
-                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${state.sizeIdx === i
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${state.sizeIdx === i
                     ? 'bg-emerald-700 text-white'
                     : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
@@ -278,14 +278,14 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
         </div>
 
         <div>
-          <div className={`${MONO} mb-2 text-[11px] uppercase tracking-wider ${TEXT_MUTED}`}>Carbon price</div>
+          <div className={`${MONO} mb-1 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>Carbon price</div>
           <div className="flex gap-1.5" role="group" aria-label="Carbon price">
             {CPS.map((cp, i) => (
               <button
                 key={cp.l}
                 onClick={() => actions.setCarbonPrice(i)}
                 aria-pressed={state.carbonPriceIdx === i}
-                className={`${MONO} rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${state.carbonPriceIdx === i
+                className={`${MONO} rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${state.carbonPriceIdx === i
                     ? 'bg-emerald-700 text-white'
                     : `${CHIP_BG} text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700`
                   }`}
@@ -299,9 +299,9 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
         <ResetButton onReset={actions.reset} />
       </div>
 
-      <div className={`flex flex-wrap items-end gap-6 border-t ${BORDER_SUBTLE} pt-4`}>
+      <div className={`flex flex-wrap items-end gap-4 border-t ${BORDER_SUBTLE} pt-3`}>
         <div>
-          <div className={`${MONO} mb-2 text-[11px] uppercase tracking-wider ${TEXT_MUTED}`}>
+          <div className={`${MONO} mb-1 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>
             Simulation constraints
           </div>
           <div className="flex items-center gap-3">
@@ -392,11 +392,11 @@ function UpgradeCard({ upgrade, isSelected, isDragging, qty, onQtyChange, disabl
         }`}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className={`${MONO} rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isSelected ? 'bg-white/20 text-white' : cat.badge}`}>
+        <span className={`${MONO} rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${isSelected ? 'bg-white/20 text-white' : cat.badge}`}>
           {upgrade.category}
         </span>
         <span
-          className={`${MONO} flex h-6 w-10 items-center justify-center rounded-md text-[10px] font-semibold`}
+          className={`${MONO} flex h-6 w-10 items-center justify-center rounded-md text-xs font-semibold`}
           style={{ background: upgrade.bg, color: upgrade.tc }}
         >
           {upgrade.abbr}
@@ -415,7 +415,7 @@ function UpgradeCard({ upgrade, isSelected, isDragging, qty, onQtyChange, disabl
       >
         <span className={`pointer-events-none text-sm font-medium ${isSelected ? '' : TEXT_PRIMARY}`}>{upgrade.name}</span>
         <div
-          className={`${MONO} pointer-events-none mt-2 flex gap-3 text-[11px] ${isSelected ? 'text-white/80' : TEXT_MUTED
+          className={`${MONO} pointer-events-none mt-2 flex gap-3 text-xs ${isSelected ? 'text-white/80' : TEXT_MUTED
             }`}
         >
           <span>{formatUSD(upgrade.capex * qty)} capex</span>
@@ -463,7 +463,7 @@ function UpgradeCard({ upgrade, isSelected, isDragging, qty, onQtyChange, disabl
         </div>
       </div>
       {disabled && (
-        <p role="status" className="mt-1.5 text-[11px] font-medium text-rose-700 dark:text-rose-400">
+        <p role="status" className="mt-1.5 text-xs font-medium text-rose-700 dark:text-rose-400">
           {disabledReason}
         </p>
       )}
@@ -475,7 +475,7 @@ function UpgradePool({ state, actions, financials, sizeFm, gridFull, selectedId,
   return (
     <section
       aria-label="Upgrade catalog"
-      className={`flex w-full flex-col rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-4 shadow-sm lg:w-72 lg:flex-shrink-0`}
+      className={`flex w-full flex-col rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4 shadow-md lg:w-72 lg:flex-shrink-0 print:hidden`}
     >
       <div className="mb-3">
         <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Upgrade catalog</h2>
@@ -538,7 +538,7 @@ function GridSlot({ index, upgrade, isDropTarget, isInvalidTarget, invalidReason
           aria-label={`Slot ${index + 1}, empty.${isInvalidTarget && invalidReason ? ' ' + invalidReason : ''}`}
           className={`${MONO} flex h-24 w-full flex-col items-center justify-center gap-1 rounded-xl border-2 transition-colors ${stateClasses}`}
         >
-          <span className="pointer-events-none text-[10px] tracking-wider">
+          <span className="pointer-events-none text-xs tracking-wider">
             SLOT {String(index + 1).padStart(2, '0')}
           </span>
           <span className="pointer-events-none text-xl leading-none opacity-60">+</span>
@@ -546,7 +546,7 @@ function GridSlot({ index, upgrade, isDropTarget, isInvalidTarget, invalidReason
         {isInvalidTarget && invalidReason && (
           <div
             role="alert"
-            className="pointer-events-none absolute -top-2 left-1/2 z-10 w-48 -translate-x-1/2 -translate-y-full rounded-lg bg-rose-700 px-2.5 py-1.5 text-[10px] font-medium leading-snug text-white shadow-lg"
+            className="pointer-events-none absolute -top-2 left-1/2 z-10 w-48 -translate-x-1/2 -translate-y-full rounded-lg bg-rose-700 px-2.5 py-1.5 text-xs font-medium leading-snug text-white shadow-lg"
           >
             {invalidReason}
             <div className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-rose-700" />
@@ -567,10 +567,10 @@ function GridSlot({ index, upgrade, isDropTarget, isInvalidTarget, invalidReason
           upgrade's own inline background color. */}
       <div className="pointer-events-none absolute inset-0 rounded-xl border-2 border-transparent opacity-0 transition-opacity group-hover:border-red-500 group-hover:bg-red-50/40 group-hover:opacity-100" />
       <div className="pointer-events-none flex items-center justify-between">
-        <span className={`${MONO} text-[10px] tracking-wider opacity-80`}>
+        <span className={`${MONO} text-xs tracking-wider opacity-80`}>
           SLOT {String(index + 1).padStart(2, '0')}
         </span>
-        <span className={`${MONO} text-[10px] font-bold`}>{upgrade.abbr}</span>
+        <span className={`${MONO} text-xs font-bold`}>{upgrade.abbr}</span>
       </div>
       <div className="pointer-events-none text-xs font-semibold leading-tight">{upgrade.name}</div>
     </button>
@@ -638,7 +638,7 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
   }
 
   return (
-    <section aria-label="Facility layout" className={`flex-1 overflow-y-auto rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
+    <section aria-label="Facility layout" className={`flex-1 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Facility layout</h2>
@@ -721,10 +721,10 @@ function MetricBar({ label, value, barPct, tier }) {
 
 function MetricCard({ label, value, sub }) {
   return (
-    <div className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-3.5`}>
-      <div className={`text-[11px] uppercase tracking-wide ${TEXT_MUTED}`}>{label}</div>
+    <div className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-3.5 shadow-sm`}>
+      <div className={`text-xs uppercase tracking-wide ${TEXT_MUTED}`}>{label}</div>
       <div className={`${MONO} mt-0.5 text-lg font-semibold ${TEXT_PRIMARY}`}>{value}</div>
-      {sub && <div className={`text-[11px] ${TEXT_MUTED}`}>{sub}</div>}
+      {sub && <div className={`text-xs ${TEXT_MUTED}`}>{sub}</div>}
     </div>
   );
 }
@@ -733,7 +733,7 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
   return (
     <aside
       aria-label="Facility metrics"
-      className={`w-full flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm lg:w-80`}
+      className={`w-full flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md lg:w-80 print:hidden`}
     >
       <div>
         <h2 className={`mb-3 text-sm font-semibold ${TEXT_PRIMARY}`}>Efficiency</h2>
@@ -759,7 +759,7 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
         >
           <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${targetAchievedPct}%` }} />
         </div>
-        <div className={`mt-1 text-[11px] ${TEXT_MUTED}`}>{targetAchievedPct}% of decarbonization target achieved</div>
+        <div className={`mt-1 text-xs ${TEXT_MUTED}`}>{targetAchievedPct}% of decarbonization target achieved</div>
       </div>
 
       <div>
@@ -777,10 +777,10 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
       </div>
 
       {metrics.deployment && (
-        <div className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-3.5`}>
-          <div className={`text-[11px] uppercase tracking-wide ${TEXT_MUTED}`}>Deployment timeline</div>
+        <div className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-3.5 shadow-sm`}>
+          <div className={`text-xs uppercase tracking-wide ${TEXT_MUTED}`}>Deployment timeline</div>
           <div className={`${MONO} mt-0.5 text-sm font-semibold ${TEXT_PRIMARY}`}>{metrics.deployment.label}</div>
-          <div className={`text-[11px] ${TEXT_MUTED}`}>{metrics.deployment.note}</div>
+          <div className={`text-xs ${TEXT_MUTED}`}>{metrics.deployment.note}</div>
         </div>
       )}
     </aside>
@@ -879,7 +879,7 @@ function CashflowChart({ financials }) {
   return (
     <section
       aria-label="10-Year Cumulative Financial Outlook"
-      className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm print:hidden`}
+      className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md print:hidden`}
     >
       <h2 className={`mb-1 text-sm font-semibold ${TEXT_PRIMARY}`}>10-Year Cumulative Financial Outlook ($M)</h2>
       <p className={`mb-5 text-xs ${TEXT_MUTED}`}>Year 0 shows the upfront capital hit; the dotted line marks break-even.</p>
@@ -916,7 +916,7 @@ function CashflowChart({ financials }) {
         </div>
         <div className="mt-2 flex gap-2">
           {years.map(({ year }) => (
-            <div key={year} className={`${MONO} flex-1 text-center text-[10px] ${TEXT_MUTED}`}>
+            <div key={year} className={`${MONO} flex-1 text-center text-xs ${TEXT_MUTED}`}>
               Y{year}
             </div>
           ))}
@@ -931,7 +931,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
     <div className="flex-1 space-y-6 overflow-y-auto">
       <section
         aria-label="Enterprise Operational Risk and Regulatory Audit"
-        className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm print:hidden`}
+        className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md print:hidden`}
       >
         <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Enterprise Operational Risk &amp; Regulatory Audit</h2>
         <RiskAuditSection risks={activeRisks} />
@@ -939,7 +939,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
 
       <CashflowChart financials={financials} />
 
-      <section aria-label="Roadmap by phase" className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
+      <section aria-label="Roadmap by phase" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
         <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Roadmap by phase</h2>
         <div className="grid grid-cols-3 gap-4">
           {roadmap.map((phase) => {
@@ -960,7 +960,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                       <li key={u.id} className={`flex items-center gap-1.5 text-xs ${TEXT_BODY}`}>
                         {u.name}
                         {u.count > 1 && (
-                          <span className={`${MONO} rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200`}>
+                          <span className={`${MONO} rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200`}>
                             x{u.count}
                           </span>
                         )}
@@ -968,7 +968,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                     ))}
                   </ul>
                 )}
-                <div className={`${MONO} mt-3 space-y-0.5 border-t ${BORDER_SUBTLE} pt-2.5 text-[11px] ${TEXT_MUTED}`}>
+                <div className={`${MONO} mt-3 space-y-0.5 border-t ${BORDER_SUBTLE} pt-2.5 text-xs ${TEXT_MUTED}`}>
                   <div>CapEx {formatUSD(phase.capex)}</div>
                   <div>Savings {formatUSD(phase.annualSavings)}/yr</div>
                   <div>{phase.co2}t CO₂ reduced</div>
@@ -979,7 +979,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
         </div>
       </section>
 
-      <section aria-label="Financial detail" className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
+      <section aria-label="Financial detail" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
         <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Financial detail</h2>
         <div className="mb-4 grid grid-cols-4 gap-3">
           <MetricCard label="Upgrade CapEx" value={formatUSD(financials.upgradeCapex)} />
@@ -990,7 +990,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
         <div className={`overflow-hidden rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG}`}>
           <table className="w-full text-left text-sm">
             <caption className="sr-only">10-year cumulative net financial return by year</caption>
-            <thead className={`text-[11px] uppercase tracking-wide ${TEXT_MUTED}`}>
+            <thead className={`text-xs uppercase tracking-wide ${TEXT_MUTED}`}>
               <tr>
                 <th scope="col" className="px-4 py-2.5">Year</th>
                 <th scope="col" className="px-4 py-2.5">Cumulative net</th>
@@ -1004,7 +1004,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                   <td className={`px-4 py-2 ${TEXT_BODY}`}>{formatUSD(y.cumulativeNet)}</td>
                   <td className="px-4 py-2">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${y.isPositive
+                      className={`rounded-full px-2 py-0.5 text-xs ${y.isPositive
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                           : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                         }`}
@@ -1020,7 +1020,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
       </section>
 
       <div className="grid grid-cols-2 gap-6">
-        <section aria-label="PUE versus industry" className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
+        <section aria-label="PUE versus industry" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
           <div className="mb-3 flex items-center justify-between">
             <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>PUE vs. industry</h3>
             <span className={`${MONO} text-xs text-emerald-700 dark:text-emerald-400`}>beats {pueBenchmark.percentile}% of peers</span>
@@ -1031,7 +1031,7 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
             ))}
           </div>
         </section>
-        <section aria-label="WUE versus industry" className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-5 shadow-sm`}>
+        <section aria-label="WUE versus industry" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
           <div className="mb-3 flex items-center justify-between">
             <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>WUE vs. industry</h3>
             <span className={`${MONO} text-xs text-emerald-700 dark:text-emerald-400`}>beats {wueBenchmark.percentile}% of peers</span>
@@ -1053,152 +1053,85 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
 // Business case tab
 // ════════════════════════════════════════════════════════════════
 
-function buildExportPayload({ state, metrics, financials, placedUpgrades, sizeLabel }) {
-  const aggregated = aggregateUpgrades(placedUpgrades);
-  return {
-    generatedAt: new Date().toISOString(),
-    facility: {
-      size: sizeLabel,
-      slotsDeployed: placedUpgrades.length,
-      totalSlots: state.gridSlots,
-    },
-    upgrades: aggregated.map((u) => ({ name: u.name, id: u.id, count: u.count })),
-    initialAllocation: {
-      activeCapExDeployed: financials.capex,
-      budgetLimit: state.budgetLimit,
-      budgetCushionRemaining: state.budgetLimit - financials.capex,
-    },
-    operationalVelocity: {
-      annualOpexSavings: financials.annualSavings,
-      pue: metrics.pue.value,
-      wue: metrics.wue.value,
-    },
-    amortization: {
-      breakEvenYears: financials.breakEvenYears,
-    },
-    assetLifecycleYield: {
-      tenYearNetReturn: financials.netAtYear10,
-      yearByYear: financials.yearByYear,
-    },
-  };
-}
-
-function downloadExportPayload(payload, sizeLabel) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `business-case-${sizeLabel.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+function PrintMetricCard({ label, value, sub }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+      <div className="text-xs uppercase tracking-wide text-slate-600">{label}</div>
+      <div className="mt-0.5 font-mono text-lg font-semibold text-slate-900">{value}</div>
+      {sub && <div className="text-xs text-slate-600">{sub}</div>}
+    </div>
+  );
 }
 
 function PrintBrief({ state, metrics, financials, placedUpgrades, sizeLabel, regionLabel, hasUpgrades, breakEven }) {
   return (
-    <div className="mx-auto max-w-4xl p-8 text-black">
-      <div className="mb-6 border-b-2 border-black pb-4">
-        <h1 className="text-lg font-bold tracking-tight">
+    // print-color-adjust forces backgrounds and borders to actually survive
+    // to paper — most browsers default to stripping or graying them out on
+    // print otherwise, which would make this look nothing like the on-screen
+    // cards it's meant to match.
+    <div
+      className="mx-auto max-w-4xl p-8 text-slate-900"
+      style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', colorAdjust: 'exact' }}
+    >
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h1 className="text-lg font-bold tracking-tight text-slate-900">
           EXECUTIVE LIFECYCLE BRIEF: ENTERPRISE DATA CENTER SUSTAINABILITY INITIATIVE
         </h1>
-        <p className="mt-1 text-sm">
+        <p className="mt-1 text-sm text-slate-600">
           Region: {regionLabel} &nbsp;|&nbsp; Facility Size: {sizeLabel}
         </p>
       </div>
 
       {!hasUpgrades ? (
-        <p className="text-sm">No upgrades deployed. Return to the Sandbox tab to build a configuration first.</p>
+        <p className="text-sm text-slate-600">No upgrades deployed. Return to the Sandbox tab to build a configuration first.</p>
       ) : (
-        <>
-          <section className="mb-6">
-            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-              Capital Investment Profile
-            </h2>
-            <table className="w-full text-sm">
-              <tbody>
-                <tr>
-                  <td className="py-1">Total CapEx Deployed</td>
-                  <td className="py-1 text-right font-semibold">{formatUSD(financials.capex)}</td>
-                </tr>
-                <tr>
-                  <td className="py-1">Remaining Baseline Budget Allocation</td>
-                  <td className="py-1 text-right font-semibold">{formatUSD(state.budgetLimit - financials.capex)}</td>
-                </tr>
-              </tbody>
-            </table>
+        <div className="space-y-4">
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Capital Investment Profile</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <PrintMetricCard label="Total CapEx Deployed" value={formatUSD(financials.capex)} />
+              <PrintMetricCard label="Remaining Budget Allocation" value={formatUSD(state.budgetLimit - financials.capex)} />
+            </div>
           </section>
 
-          <section className="mb-6">
-            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-              Operational Velocity Profile
-            </h2>
-            <table className="w-full text-sm">
-              <tbody>
-                <tr>
-                  <td className="py-1">Total Annualized OpEx Savings</td>
-                  <td className="py-1 text-right font-semibold">{formatUSD(financials.annualSavings)}</td>
-                </tr>
-                <tr>
-                  <td className="py-1">Final Facility PUE</td>
-                  <td className="py-1 text-right font-semibold">{metrics.pue.value}</td>
-                </tr>
-              </tbody>
-            </table>
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Operational Velocity Profile</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <PrintMetricCard label="Annualized OpEx Savings" value={formatUSD(financials.annualSavings)} />
+              <PrintMetricCard label="Final Facility PUE" value={metrics.pue.value} />
+            </div>
           </section>
 
-          <section className="mb-6">
-            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-              Amortization Milestone
-            </h2>
-            <p className="text-sm">
-              Break-Even Threshold: <span className="font-semibold">{breakEven}</span>
-              {financials.breakEvenYears && (
-                <span className="text-xs"> (Total CapEx ÷ Annualized OpEx Savings)</span>
-              )}
-            </p>
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Amortization Milestone</h2>
+            <PrintMetricCard
+              label="Break-Even Threshold"
+              value={breakEven}
+              sub={financials.breakEvenYears ? 'Total CapEx ÷ Annualized OpEx Savings' : undefined}
+            />
           </section>
 
-          <section className="mb-6">
-            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-              10-Year Financial Forecast
-            </h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-black">
-                  <th scope="col" className="py-1 text-left font-semibold">Year</th>
-                  <th scope="col" className="py-1 text-right font-semibold">Cumulative Net Return</th>
-                </tr>
-              </thead>
-              <tbody>
-                {financials.yearByYear.map((y) => (
-                  <tr key={y.year} className="border-b border-slate-300">
-                    <td className="py-1">{y.year}</td>
-                    <td className="py-1 text-right">{formatUSD(y.cumulativeNet)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section>
-            <h2 className="mb-2 border-b border-black text-sm font-bold uppercase tracking-wide">
-              Infrastructure Bill of Materials
-            </h2>
-            <ul className="text-sm">
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Infrastructure Bill of Materials</h2>
+            <ul className="space-y-1.5">
               {aggregateUpgrades(placedUpgrades).map((u) => (
-                <li key={u.id} className="border-b border-slate-200 py-1">
-                  {u.name}{u.count > 1 ? ` x${u.count}` : ''}
+                <li key={u.id} className="flex items-center gap-1.5 text-sm text-slate-700">
+                  {u.name}
+                  {u.count > 1 && (
+                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700">
+                      x{u.count}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           </section>
 
-          <section className="mt-6 border-t border-black pt-4">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide">
+          <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-900">
               Analytical Modeling Assumptions &amp; Methodology
             </h2>
-            <ul className="space-y-1 text-xs leading-relaxed">
+            <ul className="space-y-1">
               <li>• Facility utilization rate modeled at a static 70% baseline capacity.</li>
               <li>• Base cooling infrastructure overhead calculated at 40% of baseline operational expenses (OpEx).</li>
               <li>
@@ -1207,7 +1140,7 @@ function PrintBrief({ state, metrics, financials, placedUpgrades, sizeLabel, reg
               </li>
             </ul>
           </section>
-        </>
+        </div>
       )}
     </div>
   );
@@ -1219,11 +1152,6 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
   const breakEven = financials.breakEvenYears ? `${financials.breakEvenYears.toFixed(1)} years` : 'beyond the 10-year window';
   const upgradeNames = placedUpgrades.map((u) => u.name).join(', ');
   const [showPreview, setShowPreview] = useState(false);
-
-  function handleDownload() {
-    const payload = buildExportPayload({ state, metrics, financials, placedUpgrades, sizeLabel });
-    downloadExportPayload(payload, sizeLabel);
-  }
 
   const briefProps = { state, metrics, financials, placedUpgrades, sizeLabel, regionLabel, hasUpgrades, breakEven };
 
@@ -1238,16 +1166,6 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
             {showPreview ? 'Back to Memo' : 'Preview Print Layout'}
           </button>
           <button
-            onClick={handleDownload}
-            disabled={!hasUpgrades}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium shadow-sm ${hasUpgrades
-                ? `${BORDER_STRONG} ${CARD_BG} text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800`
-                : `cursor-not-allowed ${BORDER_SUBTLE} ${CHIP_BG} ${TEXT_FAINT}`
-              }`}
-          >
-            Download Report Data (.json)
-          </button>
-          <button
             onClick={() => window.print()}
             className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-800"
           >
@@ -1259,7 +1177,7 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
           // Same component that renders inside the real hidden print:block
           // wrapper below — this is a live look at the actual print output,
           // not a second copy that can quietly drift out of sync with it.
-          <div className={`rounded-xl border ${BORDER_STRONG} bg-white shadow-sm print:hidden`}>
+          <div className={`rounded-xl border ${BORDER_SUBTLE} bg-white shadow-md print:hidden`}>
             <div className="border-b border-slate-200 bg-slate-100 px-4 py-2 text-xs font-medium text-slate-600">
               Print preview — this is what "Print / Export Report" produces
             </div>
@@ -1268,7 +1186,7 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
         ) : (
           <section
             aria-label="Business case memo"
-            className={`rounded-xl border ${BORDER_STRONG} ${CARD_BG} p-10 shadow-sm print:hidden`}
+            className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-10 shadow-md print:hidden`}
           >
             <div className={`mb-8 border-b ${BORDER_SUBTLE} pb-6`}>
               <div className={`${MONO} text-xs uppercase tracking-widest ${TEXT_MUTED}`}>
@@ -1460,7 +1378,7 @@ function RiskAuditBadge({ activeRisks, onViewResults }) {
   if (activeRisks.length === 0) {
     return (
       <div className="print:hidden">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-3.5 py-1.5 text-xs font-semibold text-white dark:bg-emerald-600">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-3.5 py-1.5 text-xs font-semibold text-white dark:bg-emerald-700">
           ✓ Architecture Fully Compliant
         </span>
       </div>
@@ -1508,15 +1426,14 @@ export default function Page() {
   }, []);
   const [theme, setTheme] = useState('light');
 
-  // Read the saved preference once, on mount, and apply it immediately —
-  // this is the actual fix for "toggle ignores clicks." The previous
-  // version toggled a class on a wrapper <div>, which only works if
-  // Tailwind's dark: variant is scoped under that div. Applying the class
-  // to document.documentElement directly is what the dark: variant
-  // actually needs regardless of where in the tree the toggle button lives,
-  // and it's also required for anything rendered outside this component
-  // tree (portals, browser-native UI) to respect the theme.
-  useEffect(() => {
+  // useLayoutEffect fires before the browser paints the next frame, so this
+  // shrinks the flash window compared to useEffect (which fires after
+  // paint). It does not eliminate it — the server-rendered HTML paints
+  // first, before any client JS runs at all, dark or not. Actually
+  // eliminating FOUC needs a synchronous script in the document head,
+  // before hydration, which lives in layout.js, not this file. Snippet for
+  // that is in the response, not here, since I can't see that file.
+  useLayoutEffect(() => {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark' || saved === 'light') {
       setTheme(saved);

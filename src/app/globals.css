@@ -31,6 +31,6 @@ body {
   scrollbar-width: thin;
 
   transition-property: background-color, color, scrollbar-color, border-color;
-  transition-duration: 750ms;
+  transition-duration: 1200ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

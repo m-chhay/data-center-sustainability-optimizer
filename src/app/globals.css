@@ -30,7 +30,7 @@ body {
   /* Ensure the scrollbar styling is applied to the viewport */
   scrollbar-width: thin;
 
-  transition-property: background-color, color, scrollbar-color;
-  transition-duration: 1000ms;
-  transition-timing-function: ease-in-out;
+  transition-property: background-color, color, scrollbar-color, border-color;
+  transition-duration: 750ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

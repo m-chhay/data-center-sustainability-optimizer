@@ -927,124 +927,277 @@ function CashflowChart({ financials }) {
 }
 
 function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark, activeRisks }) {
+    const breakEven = financials.breakEvenYears
+        ? `${financials.breakEvenYears.toFixed(1)} yrs`
+        : '—';
+
     return (
-        <div className="flex-1 space-y-6 overflow-y-auto">
+        <div className="flex-1 space-y-6 overflow-y-auto pb-2">
             <section
-                aria-label="Enterprise Operational Risk and Regulatory Audit"
+                aria-labelledby="results-summary-heading"
+                className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}
+            >
+                <div className="mb-4">
+                    <div className={`${MONO} text-xs uppercase tracking-widest ${BRAND_TEXT}`}>
+                        Configuration results
+                    </div>
+                    <h2 id="results-summary-heading" className={`mt-1 text-xl font-semibold ${TEXT_PRIMARY}`}>
+                        Executive summary
+                    </h2>
+                    <p className={`mt-1 max-w-2xl text-sm leading-relaxed ${TEXT_MUTED}`}>
+                        The most decision-relevant efficiency, environmental, and financial outcomes
+                        from the current facility design.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <MetricCard
+                        label="Final PUE"
+                        value={metrics.pue.value}
+                        sub={`Beats ${pueBenchmark.percentile}% of peers`}
+                    />
+                    <MetricCard
+                        label="Final WUE"
+                        value={metrics.wue.value}
+                        sub={`Beats ${wueBenchmark.percentile}% of peers`}
+                    />
+                    <MetricCard
+                        label="Annual CO₂ reduction"
+                        value={`${metrics.co2}t`}
+                        sub="Avoided emissions per year"
+                    />
+                    <MetricCard
+                        label="Total CapEx"
+                        value={formatUSD(financials.capex)}
+                        sub="Current configuration"
+                    />
+                    <MetricCard
+                        label="Annual savings"
+                        value={formatUSD(financials.annualSavings)}
+                        sub="Energy and operations"
+                    />
+                    <MetricCard
+                        label="Break-even"
+                        value={breakEven}
+                        sub="Estimated payback period"
+                    />
+                </div>
+            </section>
+
+            <section
+                aria-label="Target and risk status"
                 className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md print:hidden`}
             >
-                <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Enterprise Operational Risk &amp; Regulatory Audit</h2>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Target &amp; risk status</h2>
+                    <span
+                        className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${activeRisks.length === 0
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            }`}
+                    >
+                        {activeRisks.length === 0
+                            ? 'Architecture validated'
+                            : `${activeRisks.length} active risk${activeRisks.length === 1 ? '' : 's'}`}
+                    </span>
+                </div>
                 <RiskAuditSection risks={activeRisks} />
             </section>
 
-            <CashflowChart financials={financials} />
+            <section aria-labelledby="financial-performance-heading" className="space-y-4">
+                <div>
+                    <h2 id="financial-performance-heading" className={`text-lg font-semibold ${TEXT_PRIMARY}`}>
+                        Financial performance
+                    </h2>
+                    <p className={`mt-1 text-sm ${TEXT_MUTED}`}>
+                        Cash flow, investment composition, and the expected return profile.
+                    </p>
+                </div>
 
-            <section aria-label="Roadmap by phase" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
-                <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Roadmap by phase</h2>
-                <div className="grid grid-cols-3 gap-4">
+                <CashflowChart financials={financials} />
+
+                <div className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <MetricCard label="Upgrade CapEx" value={formatUSD(financials.upgradeCapex)} />
+                        <MetricCard label="Slot CapEx" value={formatUSD(financials.slotCapex)} />
+                        <MetricCard label="Carbon value" value={formatUSD(financials.carbonValue)} />
+                        <MetricCard label="10-yr net" value={formatUSD(financials.netAtYear10)} />
+                    </div>
+
+                    <details className={`mt-4 rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG}`}>
+                        <summary
+                            className={`cursor-pointer px-4 py-3 text-sm font-semibold ${TEXT_PRIMARY} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600`}
+                        >
+                            View year-by-year financial detail
+                        </summary>
+                        <div className={`overflow-x-auto border-t ${BORDER_SUBTLE}`}>
+                            <table className="min-w-full text-left text-sm">
+                                <caption className="sr-only">
+                                    10-year cumulative net financial return by year
+                                </caption>
+                                <thead className={`text-xs uppercase tracking-wide ${TEXT_MUTED}`}>
+                                    <tr>
+                                        <th scope="col" className="px-4 py-2.5">Year</th>
+                                        <th scope="col" className="px-4 py-2.5">Cumulative net</th>
+                                        <th scope="col" className="px-4 py-2.5">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className={`${MONO} divide-y ${BORDER_SUBTLE}`}>
+                                    {financials.yearByYear.map((year) => (
+                                        <tr key={year.year}>
+                                            <td className={`px-4 py-2 ${TEXT_BODY}`}>{year.year}</td>
+                                            <td className={`px-4 py-2 ${TEXT_BODY}`}>
+                                                {formatUSD(year.cumulativeNet)}
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                <span
+                                                    className={`rounded-full px-2 py-0.5 text-xs ${year.isPositive
+                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                                        }`}
+                                                >
+                                                    {year.isPositive ? 'positive' : 'negative'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+            <section aria-labelledby="benchmarks-heading">
+                <div className="mb-4">
+                    <h2 id="benchmarks-heading" className={`text-lg font-semibold ${TEXT_PRIMARY}`}>
+                        Industry benchmarks
+                    </h2>
+                    <p className={`mt-1 text-sm ${TEXT_MUTED}`}>
+                        Compare the modeled facility against peer efficiency ranges.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <section
+                        aria-label="PUE versus industry"
+                        className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}
+                    >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>PUE vs. industry</h3>
+                            <span className={`${MONO} text-xs ${BRAND_TEXT}`}>
+                                beats {pueBenchmark.percentile}% of peers
+                            </span>
+                        </div>
+                        <div className="space-y-2.5">
+                            {PEERS_PUE.map((peer) => (
+                                <BenchmarkRow key={peer.name} peer={peer} yourValue={metrics.pue.value} />
+                            ))}
+                        </div>
+                    </section>
+
+                    <section
+                        aria-label="WUE versus industry"
+                        className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}
+                    >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>WUE vs. industry</h3>
+                            <span className={`${MONO} text-xs ${BRAND_TEXT}`}>
+                                beats {wueBenchmark.percentile}% of peers
+                            </span>
+                        </div>
+                        <div className="space-y-2.5">
+                            {PEERS_WUE.map((peer) => (
+                                <BenchmarkRow key={peer.name} peer={peer} yourValue={metrics.wue.value} />
+                            ))}
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section
+                aria-labelledby="roadmap-heading"
+                className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}
+            >
+                <div className="mb-4">
+                    <h2 id="roadmap-heading" className={`text-lg font-semibold ${TEXT_PRIMARY}`}>
+                        Implementation roadmap
+                    </h2>
+                    <p className={`mt-1 text-sm ${TEXT_MUTED}`}>
+                        A phased view of capital, savings, and emissions impact.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {roadmap.map((phase) => {
                         const aggregated = aggregateUpgrades(phase.upgrades);
+
                         return (
-                            <div key={phase.phase} className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-4`}>
-                                <div className="mb-3 flex items-center justify-between">
-                                    <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Phase {phase.phase}</h3>
+                            <article
+                                key={phase.phase}
+                                className={`rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG} p-4`}
+                            >
+                                <div className="mb-3 flex items-center justify-between gap-2">
+                                    <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>
+                                        Phase {phase.phase}
+                                    </h3>
                                     <span className={`${MONO} text-xs ${TEXT_MUTED}`}>
                                         {phase.upgrades.length} item{phase.upgrades.length === 1 ? '' : 's'}
                                     </span>
                                 </div>
+
                                 {aggregated.length === 0 ? (
-                                    <p className={`text-xs ${TEXT_FAINT}`}>Nothing deployed in this phase yet.</p>
+                                    <p className={`text-xs ${TEXT_FAINT}`}>
+                                        Nothing deployed in this phase yet.
+                                    </p>
                                 ) : (
                                     <ul className="space-y-1.5">
-                                        {aggregated.map((u) => (
-                                            <li key={u.id} className={`flex items-center gap-1.5 text-xs ${TEXT_BODY}`}>
-                                                {u.name}
-                                                {u.count > 1 && (
+                                        {aggregated.map((upgrade) => (
+                                            <li
+                                                key={upgrade.id}
+                                                className={`flex items-center gap-1.5 text-xs ${TEXT_BODY}`}
+                                            >
+                                                {upgrade.name}
+                                                {upgrade.count > 1 && (
                                                     <span className={`${MONO} rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200`}>
-                                                        x{u.count}
+                                                        x{upgrade.count}
                                                     </span>
                                                 )}
                                             </li>
                                         ))}
                                     </ul>
                                 )}
-                                <div className={`${MONO} mt-3 space-y-0.5 border-t ${BORDER_SUBTLE} pt-2.5 text-xs ${TEXT_MUTED}`}>
-                                    <div>CapEx {formatUSD(phase.capex)}</div>
-                                    <div>Savings {formatUSD(phase.annualSavings)}/yr</div>
-                                    <div>{phase.co2}t CO₂ reduced</div>
-                                </div>
-                            </div>
+
+                                <dl className={`${MONO} mt-3 grid gap-1 border-t ${BORDER_SUBTLE} pt-3 text-xs ${TEXT_MUTED}`}>
+                                    <div className="flex justify-between gap-3">
+                                        <dt>CapEx</dt>
+                                        <dd>{formatUSD(phase.capex)}</dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3">
+                                        <dt>Savings</dt>
+                                        <dd>{formatUSD(phase.annualSavings)}/yr</dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3">
+                                        <dt>CO₂ reduced</dt>
+                                        <dd>{phase.co2}t</dd>
+                                    </div>
+                                </dl>
+                            </article>
                         );
                     })}
                 </div>
             </section>
 
-            <section aria-label="Financial detail" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
-                <h2 className={`mb-4 text-sm font-semibold ${TEXT_PRIMARY}`}>Financial detail</h2>
-                <div className="mb-4 grid grid-cols-4 gap-3">
-                    <MetricCard label="Upgrade CapEx" value={formatUSD(financials.upgradeCapex)} />
-                    <MetricCard label="Slot CapEx" value={formatUSD(financials.slotCapex)} />
-                    <MetricCard label="Carbon value" value={formatUSD(financials.carbonValue)} />
-                    <MetricCard label="Annual savings" value={formatUSD(financials.annualSavings)} />
+            <details className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} shadow-md print:hidden`}>
+                <summary
+                    className={`cursor-pointer p-5 text-sm font-semibold ${TEXT_PRIMARY} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600`}
+                >
+                    Modeling assumptions &amp; methodology
+                </summary>
+                <div className="px-5 pb-5">
+                    <ModelingAssumptions />
                 </div>
-                <div className={`overflow-hidden rounded-xl border ${BORDER_SUBTLE} ${CHIP_BG}`}>
-                    <table className="w-full text-left text-sm">
-                        <caption className="sr-only">10-year cumulative net financial return by year</caption>
-                        <thead className={`text-xs uppercase tracking-wide ${TEXT_MUTED}`}>
-                            <tr>
-                                <th scope="col" className="px-4 py-2.5">Year</th>
-                                <th scope="col" className="px-4 py-2.5">Cumulative net</th>
-                                <th scope="col" className="px-4 py-2.5">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className={`${MONO} divide-y ${BORDER_SUBTLE}`}>
-                            {financials.yearByYear.map((y) => (
-                                <tr key={y.year}>
-                                    <td className={`px-4 py-2 ${TEXT_BODY}`}>{y.year}</td>
-                                    <td className={`px-4 py-2 ${TEXT_BODY}`}>{formatUSD(y.cumulativeNet)}</td>
-                                    <td className="px-4 py-2">
-                                        <span
-                                            className={`rounded-full px-2 py-0.5 text-xs ${y.isPositive
-                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                                                }`}
-                                        >
-                                            {y.isPositive ? 'positive' : 'negative'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <div className="grid grid-cols-2 gap-6">
-                <section aria-label="PUE versus industry" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
-                    <div className="mb-3 flex items-center justify-between">
-                        <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>PUE vs. industry</h3>
-                        <span className={`${MONO} text-xs text-emerald-700 dark:text-emerald-400`}>beats {pueBenchmark.percentile}% of peers</span>
-                    </div>
-                    <div className="space-y-2.5">
-                        {PEERS_PUE.map((p) => (
-                            <BenchmarkRow key={p.name} peer={p} yourValue={metrics.pue.value} />
-                        ))}
-                    </div>
-                </section>
-                <section aria-label="WUE versus industry" className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
-                    <div className="mb-3 flex items-center justify-between">
-                        <h3 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>WUE vs. industry</h3>
-                        <span className={`${MONO} text-xs text-emerald-700 dark:text-emerald-400`}>beats {wueBenchmark.percentile}% of peers</span>
-                    </div>
-                    <div className="space-y-2.5">
-                        {PEERS_WUE.map((p) => (
-                            <BenchmarkRow key={p.name} peer={p} yourValue={metrics.wue.value} />
-                        ))}
-                    </div>
-                </section>
-            </div>
-
-            <ModelingAssumptions className="print:hidden" />
+            </details>
         </div>
     );
 }

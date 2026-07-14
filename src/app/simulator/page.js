@@ -188,9 +188,13 @@ const TABS = [
 
 function TabBar({ activeTab, onChange, themeToggle }) {
     return (
-        <nav aria-label="Simulator views" className={`rounded-xl ${CARD_BG} border ${BORDER_SUBTLE} shadow-sm print:hidden`}>
-            <div className="flex items-center justify-between px-3 pt-3">
-                <div role="tablist" aria-label="Simulator views" className="flex gap-1.5">
+        <nav aria-label="Platform views" className={`simulator-nav rounded-xl ${CARD_BG} border ${BORDER_SUBTLE} shadow-sm print:hidden`}>
+            <div className="flex flex-wrap items-center gap-3 px-3 pt-3 sm:flex-nowrap">
+                <a href="/" className="simulator-brand" aria-label="NetGrid Ops home">
+                    <span className="simulator-brand-mark" aria-hidden="true"><i /><i /><i /><i /><b /></span>
+                    <span>NetGrid Ops</span>
+                </a>
+                <div role="tablist" aria-label="Platform views" className="simulator-tabs order-3 flex w-full gap-1.5 overflow-x-auto sm:order-none sm:w-auto">
                     {TABS.map((t) => (
                         <button
                             key={t.id}
@@ -208,7 +212,7 @@ function TabBar({ activeTab, onChange, themeToggle }) {
                         </button>
                     ))}
                 </div>
-                <div className="pb-2">{themeToggle}</div>
+                <div className="ml-auto pb-2">{themeToggle}</div>
             </div>
             <div className={`border-b ${BORDER_SUBTLE}`} />
         </nav>
@@ -992,8 +996,8 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                     <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Target &amp; risk status</h2>
                     <span
                         className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${activeRisks.length === 0
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                             }`}
                     >
                         {activeRisks.length === 0
@@ -1052,8 +1056,8 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                                             <td className="px-4 py-2">
                                                 <span
                                                     className={`rounded-full px-2 py-0.5 text-xs ${year.isPositive
-                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                                                         }`}
                                                 >
                                                     {year.isPositive ? 'positive' : 'negative'}
@@ -1581,10 +1585,13 @@ export default function Page() {
 
     useEffect(() => {
         const saved = localStorage.getItem('theme');
-        if (saved === 'dark' || saved === 'light') {
-            setTheme(saved);
-            document.documentElement.classList.toggle('dark', saved === 'dark');
-        }
+        const initial = saved === 'dark' || saved === 'light'
+            ? saved
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+        setTheme(initial);
+        document.documentElement.classList.toggle('dark', initial === 'dark');
     }, []);
 
     function toggleTheme() {
@@ -1605,7 +1612,7 @@ export default function Page() {
     }, [placementError, actions]);
 
     return (
-        <main className={`flex h-screen flex-col gap-3 ${PAGE_BG} p-3 font-sans ${TEXT_PRIMARY}`}>
+        <main className={`simulator-page flex min-h-screen flex-col gap-3 ${PAGE_BG} p-3 font-sans ${TEXT_PRIMARY}`}>
             {showWelcome && <WelcomeModal onStart={() => setShowWelcome(false)} />}
 
             <TabBar

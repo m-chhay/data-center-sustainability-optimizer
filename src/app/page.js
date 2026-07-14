@@ -1,216 +1,189 @@
-import Link from 'next/link';
-import ThemeToggle from './components/ThemeToggle';
+"use client";
 
-export default function HomePage() {
+import { useEffect, useState } from "react";
+import "./landing.css";
+
+const metrics = [
+  { label: "Final PUE", value: "1.38", unit: "PUE", detail: "Top 22% of peers", tone: "lime" },
+  { label: "Final WUE", value: "0.82", unit: "L/kWh", detail: "Top 31% of peers", tone: "blue" },
+  { label: "Annual CO₂ reduction", value: "4,860", unit: "t", detail: "Avoided per year", tone: "mint" },
+  { label: "Total CapEx", value: "$28.4", unit: "M", detail: "Within budget", tone: "sand" },
+  { label: "Annual savings", value: "$6.2", unit: "M", detail: "Energy + operations", tone: "lime" },
+  { label: "Break-even", value: "4.6", unit: "yrs", detail: "Estimated payback", tone: "blue" },
+];
+
+const features = [
+  {
+    number: "01",
+    title: "Model the facility",
+    text: "Configure region, capacity, cooling, power, and compute density against a realistic operating baseline.",
+  },
+  {
+    number: "02",
+    title: "Test every trade-off",
+    text: "See how each infrastructure decision moves PUE, WUE, carbon exposure, and capital at the same time.",
+  },
+  {
+    number: "03",
+    title: "Build the business case",
+    text: "Turn the strongest configuration into a clear investment narrative with measurable operational outcomes.",
+  },
+];
+
+function BrandMark() {
   return (
-    <main className="min-h-screen bg-[#F3F5EE] text-[#1F2E22] dark:bg-[#10201A] dark:text-[#ECF1E9]">
-      {/* ── Top bar ── */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#2F5741] text-xs font-bold text-white dark:bg-[#3D7A5C]">
-            ▣
-          </span>
-          <span className="text-lg font-semibold">NetGrid Ops</span>
-        </div>
-
-        <nav className="hidden items-center gap-8 text-sm text-[#55665A] dark:text-[#9FB0A4] sm:flex">
-          <span>Product</span>
-          <span>Features</span>
-          <span>Pricing</span>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/simulator"
-            className="rounded-full bg-[#2F5741] px-4 py-2 text-sm font-medium text-white transition-transform duration-200 hover:scale-[1.03] dark:bg-[#3D7A5C]"
-          >
-            Launch Simulator
-          </Link>
-          <ThemeToggle />
-        </div>
-      </header>
-
-      {/* ── Hero ── */}
-      <section className="mx-auto max-w-3xl px-6 pb-16 pt-8 text-center sm:pt-14">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#DCE3D6] px-3 py-1 text-xs font-medium text-[#55665A] dark:border-[#24352B] dark:text-[#9FB0A4]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#3D7A5C]" />
-          Real-time PUE, WUE, and CapEx modeling
-        </div>
-
-        <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Balance <em className="font-serif italic text-[#2F5741] dark:text-[#5FAE86]">Your Infrastructure</em>
-          <br />
-          With NetGrid Ops.
-        </h1>
-
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-[#55665A] dark:text-[#9FB0A4]">
-          Optimize facility efficiency, balance resource load, and price every upgrade decision
-          before it hits the budget with NetGrid Ops.
-        </p>
-
-        <Link
-          href="/simulator"
-          className="mt-8 inline-block rounded-full bg-[#2F5741] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:bg-[#3D7A5C]"
-        >
-          Launch Simulator
-        </Link>
-      </section>
-
-      {/* ── Dashboard preview card — the signature graphic. Deliberately
-          fixed dark styling regardless of page theme, same way a lot of
-          real analytics previews stay dark for contrast, so this doesn't
-          need its own light/dark variant on every inner element. ── */}
-      <section className="mx-auto max-w-4xl px-6 pb-20">
-        <div className="rounded-2xl border border-black/10 bg-[#0F1A14] p-5 shadow-xl">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MiniStat label="PUE" value="1.42" />
-            <MiniStat label="WUE" value="1.21" />
-            <MiniStat label="CapEx" value="$18.4M" />
-            <MiniStat label="Savings/yr" value="$3.1M" />
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-wide text-[#9FB0A4]">CapEx allocation</div>
-              <div className="mt-3 flex items-center gap-4">
-                <DonutMock />
-                <ul className="space-y-1 text-xs text-[#CBD5C9]">
-                  <li className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#5FAE86]" /> Cooling
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#3D7A5C]" /> Power
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#24352B]" /> Structural
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-wide text-[#9FB0A4]">10-yr cumulative return</div>
-              <BarsMock />
-            </div>
-          </div>
-        </div>
-
-        {/* Placeholder-logo strip — "Logoipsum" is a standard mockup
-            convention, not a real-company claim. */}
-        <p className="mt-8 text-center text-xs uppercase tracking-wide text-[#55665A] dark:text-[#9FB0A4]">
-          Modeled against real facility data patterns
-        </p>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 opacity-70">
-          <PlaceholderLogo label="Logoipsum" />
-          <PlaceholderLogo label="Loco" />
-          <PlaceholderLogo label="Logoipsum" />
-          <PlaceholderLogo label="Ipsum" />
-        </div>
-      </section>
-
-      {/* ── Dark feature band ── */}
-      <section className="bg-[#152A20] py-20 dark:bg-[#0B1512]">
-        <div className="mx-auto max-w-5xl px-6 text-center">
-          <h2 className="text-3xl font-semibold text-white sm:text-4xl">
-            Achieve <em className="font-serif italic text-[#7FC9A3]">System Efficiency</em>
-            <br />
-            With Proactive Modeling
-          </h2>
-
-          <div className="mt-12 grid gap-4 text-left sm:grid-cols-3">
-            <PillarCard
-              icon="🔋"
-              label="Power"
-              metric="PUE"
-              body="Every point above 1.0 is overhead you're paying for twice, once in energy, once in carbon."
-            />
-            <PillarCard
-              icon="💧"
-              label="Water"
-              metric="WUE"
-              body="Liquid cooling against cooling towers, priced against the water table your region actually has."
-            />
-            <PillarCard
-              icon="💰"
-              label="Capital"
-              metric="ROI"
-              body="The efficient hardware is rarely the cheap hardware. Model both curves before the board meeting."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Closing CTA ── */}
-      <section className="mx-auto max-w-3xl px-6 py-20 text-center">
-        <h2 className="text-3xl font-semibold sm:text-4xl">Model your next facility decision.</h2>
-        <Link
-          href="/simulator"
-          className="mt-8 inline-block rounded-full bg-[#2F5741] px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:bg-[#3D7A5C]"
-        >
-          Launch Simulator →
-        </Link>
-      </section>
-    </main>
-  );
-}
-
-function MiniStat({ label, value }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="text-[11px] uppercase tracking-wide text-[#9FB0A4]">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-white">{value}</div>
-    </div>
-  );
-}
-
-function DonutMock() {
-  // Static conic-gradient donut — a mockup accent, not a live chart.
-  return (
-    <div
-      className="h-16 w-16 flex-shrink-0 rounded-full"
-      style={{
-        background:
-          'conic-gradient(#5FAE86 0deg 140deg, #3D7A5C 140deg 250deg, #24352B 250deg 360deg)',
-      }}
-    >
-      <div className="m-auto mt-[10px] h-11 w-11 rounded-full bg-[#0F1A14]" />
-    </div>
-  );
-}
-
-function BarsMock() {
-  const heights = [30, 45, 40, 60, 55, 70, 65, 85, 80, 95];
-  return (
-    <div className="mt-3 flex h-20 items-end gap-1.5">
-      {heights.map((h, i) => (
-        <div key={i} className="flex-1 rounded-sm bg-[#3D7A5C]" style={{ height: `${h}%` }} />
-      ))}
-    </div>
-  );
-}
-
-function PlaceholderLogo({ label }) {
-  return (
-    <span className="flex items-center gap-1.5 text-lg font-semibold text-[#55665A] dark:text-[#9FB0A4]">
-      <span className="h-4 w-4 rounded-full border-2 border-current" />
-      {label}
+    <span className="brand-mark" aria-hidden="true">
+      <i /><i /><i /><i />
+      <b />
     </span>
   );
 }
 
-function PillarCard({ icon, label, metric, body }) {
+function ThemeToggle() {
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    const initial = saved === "light" || saved === "dark"
+      ? saved
+      : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", initial === "dark");
+    const frame = window.requestAnimationFrame(() => setTheme(initial));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  }
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6 transition-colors duration-200 hover:bg-white/[0.07]">
-      <div className="flex items-center justify-between">
-        <span className="text-2xl" aria-hidden="true">
-          {icon}
-        </span>
-        <span className="rounded-full border border-white/15 px-2 py-0.5 text-xs uppercase tracking-wider text-[#9FB0A4]">
-          {metric}
-        </span>
+    <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
+      <span aria-hidden="true">{theme === "dark" ? "☀" : "◐"}</span>
+    </button>
+  );
+}
+
+function DashboardPreview() {
+  return (
+    <div className="dashboard-shell" aria-label="Optimizer dashboard preview">
+      <div className="dashboard-topline">
+        <span><i /> CONFIGURATION RESULTS</span>
+        <span>EXECUTIVE SUMMARY</span>
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-white">{label}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-[#CBD5C9]">{body}</p>
+      <div className="dashboard-title-row">
+        <div><small>MODELED FACILITY</small><strong>Results overview</strong></div>
+        <span>Architecture validated</span>
+      </div>
+      <div className="metric-grid">
+        {metrics.map((metric) => (
+          <article className="metric-card" key={metric.label}>
+            <div className="metric-label"><span className={`metric-dot ${metric.tone}`} />{metric.label}</div>
+            <div><strong>{metric.value}</strong><small>{metric.unit}</small></div>
+            <span className="metric-change">{metric.detail}</span>
+          </article>
+        ))}
+      </div>
+      <div className="dashboard-main">
+        <div className="performance-card">
+          <div className="panel-heading"><span>Financial performance</span><b>10-year outlook</b></div>
+          <div className="line-chart" aria-hidden="true">
+            <div className="chart-grid" />
+            <svg viewBox="0 0 520 180" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a5d56f" stopOpacity=".32" />
+                  <stop offset="100%" stopColor="#a5d56f" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path className="area" d="M0 162 C78 154 92 124 144 129 S224 87 274 96 S348 43 397 60 S468 22 520 20 L520 180 L0 180Z" />
+              <path className="line" d="M0 162 C78 154 92 124 144 129 S224 87 274 96 S348 43 397 60 S468 22 520 20" />
+              <circle cx="520" cy="20" r="5" />
+            </svg>
+            <div className="chart-axis"><span>Year 0</span><span>Year 3</span><span>Break-even</span><span>Year 10</span></div>
+          </div>
+        </div>
+        <div className="impact-card">
+          <div className="panel-heading"><span>Target status</span><b>On track</b></div>
+          <div className="impact-number">82%</div>
+          <p>decarbonization target</p>
+          <div className="bar-chart" aria-hidden="true">
+            {[38, 52, 47, 68, 56, 78, 64, 84, 73, 91].map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <main className="landing-page">
+      <nav className="nav" aria-label="Primary navigation">
+        <a className="brand" href="#top" aria-label="NetGrid Ops home"><BrandMark />NetGrid Ops</a>
+        <div className="nav-links">
+          <a href="#product">Product</a>
+          <a href="#method">How it works</a>
+          <a href="#outcomes">Outcomes</a>
+        </div>
+        <div className="nav-actions">
+          <ThemeToggle />
+        </div>
+      </nav>
+
+      <section className="hero" id="top">
+
+        <div className="hero-content">
+          <div className="eyebrow"><span className="pulse" /> Introducing NetGrid Ops v1.0</div>
+          <h1>Design the World&apos;s<br /><em>Most Efficient Compute</em><br />Infrastructure.</h1>
+          <p>Model data center growth, energy systems, and sustainability strategies before deployment. NetGrid Ops helps infrastructure teams optimize capacity, cost, and carbon performance in real time.</p>
+          <div className="hero-actions">
+            <a className="button button--primary" href="/simulator">Open Platform <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div className="dashboard-wrap" id="model"><DashboardPreview /></div>
+      </section>
+
+      <section className="proof-strip" aria-label="Model outcomes">
+        <p>ONE MODEL. FOUR DECISIONS.</p>
+        <div><span>POWER</span><i /> <span>WATER</span><i /> <span>CARBON</span><i /> <span>CAPITAL</span></div>
+      </section>
+
+      <section className="product-section" id="product">
+        <div className="section-tag">THE OPTIMIZER</div>
+        <h2>Find the <em>most efficient path</em><br />before you build.</h2>
+        <p className="section-intro">Infrastructure choices do not happen in isolation. NetGrid Ops makes their hidden relationships visible, measurable, and easier to defend.</p>
+        <div className="feature-grid" id="method">
+          {features.map((feature) => (
+            <article key={feature.number}>
+              <span>{feature.number}</span>
+              <div className="feature-icon" aria-hidden="true"><i /><b /><em /></div>
+              <h3>{feature.title}</h3>
+              <p>{feature.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="outcomes" id="outcomes">
+        <div>
+          <span className="section-tag section-tag--dark">FACILITY OBJECTIVE</span>
+          <h2>Balance performance<br />with <em>planetary limits.</em></h2>
+        </div>
+        <div className="outcome-copy">
+          <p>Scale compute without treating sustainability as an afterthought. Compare configurations, surface constraints, and arrive at a plan built for the real world.</p>
+          <a className="button button--light" href="/simulator">Start Modeling <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+
+      <footer>
+          <a className="brand brand--footer" href="#top"><BrandMark />NetGrid Ops</a>
+        <p>Compute Infrastructure Sustainability Optimizer</p>
+        <p>Built to explore better infrastructure decisions.</p>
+      </footer>
+    </main>
   );
 }

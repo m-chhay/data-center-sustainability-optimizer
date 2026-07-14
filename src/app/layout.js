@@ -1,4 +1,4 @@
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Data Center Capacity & Sustainability Simulator",
-  description: "Capacity planning engine for high-density infrastructure optimization",
+  title: "NetGrid Ops | Compute Infrastructure Optimization",
+  description:
+    "Model data center growth, energy systems, capacity, cost, and carbon performance before deployment.",
 };
 
 export default function RootLayout({ children }) {

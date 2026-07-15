@@ -308,7 +308,7 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                     <div className={`${MONO} mb-1 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>
                         Simulation constraints
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:items-center">
                         <label className={`flex items-center gap-2 text-sm ${TEXT_BODY}`}>
                             Budget ($M)
                             <input
@@ -349,7 +349,7 @@ function ControlBar({ state, actions, financials, targetAchievedPct }) {
                     </div>
                 </div>
 
-                <div className="ml-auto flex gap-2">
+                <div className="flex w-full flex-wrap gap-2 xl:ml-auto xl:w-auto">
                     <span
                         role="status"
                         className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${overBudget
@@ -479,7 +479,7 @@ function UpgradePool({ state, actions, financials, sizeFm, gridFull, selectedId,
     return (
         <section
             aria-label="Upgrade catalog"
-            className={`flex w-full flex-col rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4 shadow-md lg:w-72 lg:flex-shrink-0 print:hidden`}
+            className={`simulator-side-panel flex w-full flex-col rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4 xl:w-72 xl:flex-shrink-0 print:hidden`}
         >
             <div className="mb-3">
                 <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Upgrade catalog</h2>
@@ -642,7 +642,7 @@ function RackGrid({ state, actions, selectedId, draggingId, onPlaced }) {
     }
 
     return (
-        <section aria-label="Facility layout" className={`flex-1 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md`}>
+        <section aria-label="Facility layout" className={`facility-workspace flex-1 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4 sm:p-5`}>
             <div className="mb-4 flex items-center justify-between">
                 <div>
                     <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Facility layout</h2>
@@ -737,7 +737,7 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
     return (
         <aside
             aria-label="Facility metrics"
-            className={`w-full flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md lg:w-80 print:hidden`}
+            className={`simulator-side-panel w-full flex-shrink-0 space-y-5 overflow-y-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 xl:w-80 print:hidden`}
         >
             <div>
                 <h2 className={`mb-3 text-sm font-semibold ${TEXT_PRIMARY}`}>Efficiency</h2>
@@ -811,7 +811,7 @@ function SandboxView({ state, actions, metrics, financials, targetAchievedPct, s
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto lg:flex-row lg:overflow-hidden">
+        <div className="sandbox-layout flex flex-1 flex-col gap-4 overflow-y-auto xl:flex-row xl:overflow-visible 2xl:gap-6">
             <UpgradePool
                 state={state}
                 actions={actions}
@@ -996,8 +996,8 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                     <h2 className={`text-sm font-semibold ${TEXT_PRIMARY}`}>Target &amp; risk status</h2>
                     <span
                         className={`${MONO} rounded-full px-3 py-1 text-xs font-medium ${activeRisks.length === 0
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                             }`}
                     >
                         {activeRisks.length === 0
@@ -1056,8 +1056,8 @@ function ResultsView({ roadmap, financials, metrics, pueBenchmark, wueBenchmark,
                                             <td className="px-4 py-2">
                                                 <span
                                                     className={`rounded-full px-2 py-0.5 text-xs ${year.isPositive
-                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                                                         }`}
                                                 >
                                                     {year.isPositive ? 'positive' : 'negative'}
@@ -1315,7 +1315,7 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
     return (
         <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl">
-                <div className="mb-4 flex items-center justify-end gap-2 print:hidden">
+                <div className="mb-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
                     <button
                         onClick={() => setShowPreview((v) => !v)}
                         className={`rounded-lg border px-4 py-2 text-sm font-medium shadow-sm ${BORDER_STRONG} ${CARD_BG} text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800`}
@@ -1343,7 +1343,7 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
                 ) : (
                     <section
                         aria-label="Business case memo"
-                        className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-10 shadow-md print:hidden`}
+                        className={`rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-md sm:p-8 lg:p-10 print:hidden`}
                     >
                         <div className={`mb-8 border-b ${BORDER_SUBTLE} pb-6`}>
                             <div className={`${MONO} text-xs uppercase tracking-widest ${TEXT_MUTED}`}>
@@ -1369,7 +1369,7 @@ function BusinessCaseView({ state, metrics, financials, placedUpgrades, sizeLabe
                                     <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${TEXT_MUTED}`}>
                                         Financial summary
                                     </h2>
-                                    <div className="grid grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                                         <MetricCard label="Total CapEx" value={formatUSD(financials.capex)} />
                                         <MetricCard label="Annual savings" value={formatUSD(financials.annualSavings)} />
                                         <MetricCard label="Break-even" value={breakEven} />

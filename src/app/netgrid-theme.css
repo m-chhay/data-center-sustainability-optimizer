@@ -132,9 +132,38 @@
 .simulator-page .border-amber-400,
 .simulator-page .border-amber-700 { border-color: var(--ng-warning) !important; }
 
-.simulator-page section,
-.simulator-page aside,
-.simulator-page nav { box-shadow: var(--ng-shadow); }
+.simulator-nav,
+.simulator-page > section,
+.simulator-page > aside { box-shadow: var(--ng-shadow); }
+.simulator-page .shadow-md { box-shadow: 0 7px 20px rgba(23, 58, 44, .055) !important; }
+.dark .simulator-page .shadow-md { box-shadow: 0 10px 24px rgba(0, 0, 0, .18) !important; }
+.simulator-page .shadow-sm { box-shadow: none !important; }
+
+.simulator-side-panel {
+  box-shadow: 0 5px 16px rgba(23, 58, 44, .045);
+}
+.facility-workspace {
+  position: relative;
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--ng-green) 45%, var(--ng-border)) !important;
+  box-shadow: 0 18px 48px rgba(23, 58, 44, .13);
+}
+.facility-workspace::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  border-radius: .75rem .75rem 0 0;
+  background: linear-gradient(90deg, var(--ng-green), var(--ng-brown));
+}
+.dark .facility-workspace {
+  box-shadow: 0 20px 52px rgba(0, 0, 0, .32);
+}
+
+@media (min-width: 1280px) {
+  .sandbox-layout > .facility-workspace { min-width: 30rem; }
+  .sandbox-layout > .simulator-side-panel { opacity: .96; }
+}
 .simulator-page input,
 .simulator-page select { color-scheme: light; }
 .dark .simulator-page input,

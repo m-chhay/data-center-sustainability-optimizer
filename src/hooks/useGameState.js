@@ -102,7 +102,9 @@ export function validatePlacement(upgradeType, placedUpgrades) {
 // functions never need to know curtailment exists — they just sum whatever
 // list they're handed, same as always.
 export function applyGridCurtailment(placedUpgrades) {
-  const solarCount = placedUpgrades.filter((u) => u.id === 'solar').length;
+  const solarCount = placedUpgrades
+    .filter((u) => u.id === 'solar')
+    .reduce((total, u) => total + (u.qty || 1), 0);
   const hasOffset = placedUpgrades.some((u) => CURTAILMENT_OFFSET_IDS.includes(u.id));
 
   if (solarCount <= SOLAR_CURTAILMENT_THRESHOLD || hasOffset) {
@@ -112,9 +114,25 @@ export function applyGridCurtailment(placedUpgrades) {
   let solarSeen = 0;
   const effectiveUpgrades = placedUpgrades.map((u) => {
     if (u.id !== 'solar') return u;
-    solarSeen += 1;
-    if (solarSeen <= SOLAR_CURTAILMENT_THRESHOLD) return u;
-    return { ...u, sav: u.sav * 0.5, co2: u.co2 * 0.5 };
+    const qty = u.qty || 1;
+    const fullYieldUnits = Math.max(
+      0,
+      Math.min(qty, SOLAR_CURTAILMENT_THRESHOLD - solarSeen)
+    );
+    const curtailedUnits = qty - fullYieldUnits;
+    solarSeen += qty;
+    if (curtailedUnits === 0) return u;
+
+    // Calculations multiply these per-unit values by qty. Reduce the
+    // per-unit yield so the first two arrays remain at full output and only
+    // subsequent arrays are curtailed to 50%.
+    const effectiveYieldFactor =
+      (fullYieldUnits + curtailedUnits * 0.5) / qty;
+    return {
+      ...u,
+      sav: u.sav * effectiveYieldFactor,
+      co2: u.co2 * effectiveYieldFactor,
+    };
   });
 
   return { effectiveUpgrades, curtailmentActive: true };
@@ -502,7 +520,7 @@ export function useGameState(config) {
   }, [metrics.progressPct, state.targetDecarbonization]);
 
   const placeUpgrade = useCallback(
-    (slotIndex, upgradeType) => {
+    (slotIndex, upgradeType, requestedQty = 1) => {
       const upgrade = UPG.find((u) => u.id === upgradeType);
       if (!upgrade) {
         console.error(`placeUpgrade: "${upgradeType}" is not a known upgrade id`);
@@ -517,7 +535,8 @@ export function useGameState(config) {
         return;
       }
 
-      const prospectiveUpgradeCapex = financials.upgradeCapex + upgrade.capex * size.fm;
+      const qty = Math.max(1, Math.min(state.gridSlots, Number(requestedQty) || 1));
+      const prospectiveUpgradeCapex = financials.upgradeCapex + upgrade.capex * qty * size.fm;
       const prospectiveTotalCapex = prospectiveUpgradeCapex + state.slotExpansionCost;
 
       if (prospectiveTotalCapex > state.budgetLimit) {
@@ -528,7 +547,7 @@ export function useGameState(config) {
 
       setIsOverBudget(false);
       setPlacementError(null);
-      dispatch({ type: 'PLACE_UPGRADE', slotIndex, upgrade });
+      dispatch({ type: 'PLACE_UPGRADE', slotIndex, upgrade: { ...upgrade, qty } });
     },
     [state.grid, state.slotExpansionCost, state.budgetLimit, placedUpgrades, financials.upgradeCapex, size.fm]
   );
@@ -540,7 +559,7 @@ export function useGameState(config) {
       dispatch({ type: 'REMOVE_UPGRADE', slotIndex });
       if (!removed) return;
 
-      const newUpgradeCapex = financials.upgradeCapex - removed.capex * size.fm;
+      const newUpgradeCapex = financials.upgradeCapex - removed.capex * (removed.qty || 1) * size.fm;
       const newTotalCapex = newUpgradeCapex + state.slotExpansionCost;
       if (newTotalCapex <= state.budgetLimit) setIsOverBudget(false);
     },

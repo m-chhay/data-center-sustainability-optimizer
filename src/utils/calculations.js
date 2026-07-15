@@ -71,7 +71,7 @@ function clamp(min, max, v) {
  * }}
  */
 export function computeMetrics(placedUpgrades, size, gridSlots) {
-  const rawCo2 = sum(placedUpgrades, (u) => u.co2);
+  const rawCo2 = sum(placedUpgrades, (u) => u.co2 * (u.qty || 1));
   const co2 = Math.round(rawCo2 * size.cm);
   const trees = Math.round(co2 * TREE_SEEDLINGS_PER_TON);
 
@@ -82,7 +82,7 @@ export function computeMetrics(placedUpgrades, size, gridSlots) {
   );
 
   // PUE: lower is better. Each upgrade contributes a (usually negative) delta.
-  const pueRaw = sum(placedUpgrades, (u) => u.pue);
+  const pueRaw = sum(placedUpgrades, (u) => u.pue * (u.qty || 1));
   const pueValue = Math.max(MIN_PUE, round2(BASE_PUE + pueRaw));
   const pueBarPct = clamp(
     5,
@@ -92,7 +92,7 @@ export function computeMetrics(placedUpgrades, size, gridSlots) {
   const pueTier = pueValue < 1.2 ? 'good' : pueValue < 1.4 ? 'ok' : 'bad';
 
   // WUE: same shape as PUE, different baseline/min and tier thresholds.
-  const wueRaw = sum(placedUpgrades, (u) => u.wue);
+  const wueRaw = sum(placedUpgrades, (u) => u.wue * (u.qty || 1));
   const wueValue = Math.max(MIN_WUE, round2(BASE_WUE + wueRaw));
   const wueBarPct = clamp(
     5,
@@ -162,12 +162,12 @@ export function computeFinancials(
   carbonPricePerTon,
   slotExpansionCost
 ) {
-  const rawCo2 = sum(placedUpgrades, (u) => u.co2);
-  const upgradeCapex = sum(placedUpgrades, (u) => u.capex) * size.fm;
+  const rawCo2 = sum(placedUpgrades, (u) => u.co2 * (u.qty || 1));
+  const upgradeCapex = sum(placedUpgrades, (u) => u.capex * (u.qty || 1)) * size.fm;
   const capex = upgradeCapex + slotExpansionCost;
 
   const carbonValue = rawCo2 * size.cm * carbonPricePerTon;
-  const annualSavings = sum(placedUpgrades, (u) => u.sav) * size.sm + carbonValue;
+  const annualSavings = sum(placedUpgrades, (u) => u.sav * (u.qty || 1)) * size.sm + carbonValue;
 
   const breakEvenYears = annualSavings > 0 ? capex / annualSavings : null;
   const netAtYear5 = annualSavings * 5 - capex;
@@ -213,9 +213,9 @@ export function computeRoadmapPhases(placedUpgrades, size, phaseMeta) {
     return {
       phase: ph.n,
       upgrades: items,
-      co2: Math.round(sum(items, (u) => u.co2) * size.cm),
-      capex: sum(items, (u) => u.capex) * size.fm,
-      annualSavings: sum(items, (u) => u.sav) * size.sm,
+      co2: Math.round(sum(items, (u) => u.co2 * (u.qty || 1)) * size.cm),
+      capex: sum(items, (u) => u.capex * (u.qty || 1)) * size.fm,
+      annualSavings: sum(items, (u) => u.sav * (u.qty || 1)) * size.sm,
     };
   });
 }

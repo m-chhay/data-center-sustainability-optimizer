@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useLayoutEffect } from 'react';
-import { useGameState, getQty } from '../../hooks/useGameState';
+import { useGameState, getQty, getUpgradeMaxCount } from '../../hooks/useGameState';
 import { UPG, SIZES, CPS, REGIONS, PEERS_PUE, PEERS_WUE } from '../../utils/constants';
 
 const MONO = 'font-mono';
@@ -795,43 +795,212 @@ function MetricsRail({ metrics, financials, targetAchievedPct }) {
 // Sandbox tab
 // ════════════════════════════════════════════════════════════════
 
-function SandboxView({ state, actions, metrics, financials, targetAchievedPct, selectedUpgradeId, setSelectedUpgradeId }) {
-    const [draggingId, setDraggingId] = useState(null);
-    const sizeFm = SIZES[state.sizeIdx].fm;
-    const gridFull = state.grid.filter((c) => c !== null).length >= state.gridSlots;
+const SANDBOX_GROUPS = [
+    { id: 'energy', label: 'Energy', upgrades: ['solar', 'battery', 'pdu'] },
+    { id: 'cooling', label: 'Cooling & water', upgrades: ['liquid', 'freeair', 'heat', 'rdhx', 'AIR_CHILLER', 'GREYWATER_REC', 'GEOTHERMAL_COOL'] },
+    { id: 'compute', label: 'Compute', upgrades: ['AI_COMPUTE_RACK'] },
+    { id: 'structural', label: 'Structural', upgrades: ['SLAB_RETROFIT'] },
+    { id: 'software', label: 'Software & controls', upgrades: ['virtual', 'ai', 'iot', 'aithermal', 'WORKLOAD_ORCH'] },
+];
 
-    function handleDragStart(e, upgrade, qty) {
-        e.dataTransfer.setData('text/plain', JSON.stringify({ id: upgrade.id, qty }));
-        e.dataTransfer.effectAllowed = 'move';
-        setDraggingId(upgrade.id);
-    }
-
-    function handleDragEnd() {
-        setDraggingId(null);
-    }
+function SettingsModal({ state, actions, onClose }) {
+    useEffect(() => {
+        function onKeyDown(event) {
+            if (event.key === 'Escape') onClose();
+        }
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
 
     return (
-        <div className="sandbox-layout flex flex-1 flex-col gap-4 overflow-y-auto xl:flex-row xl:overflow-visible 2xl:gap-6">
-            <UpgradePool
-                state={state}
-                actions={actions}
-                financials={financials}
-                sizeFm={sizeFm}
-                gridFull={gridFull}
-                selectedId={selectedUpgradeId}
-                draggingId={draggingId}
-                onSelect={setSelectedUpgradeId}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-            />
-            <RackGrid
-                state={state}
-                actions={actions}
-                selectedId={selectedUpgradeId}
-                draggingId={draggingId}
-                onPlaced={() => setSelectedUpgradeId(null)}
-            />
-            <MetricsRail metrics={metrics} financials={financials} targetAchievedPct={targetAchievedPct} />
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+            <section role="dialog" aria-modal="true" aria-labelledby="settings-title" className={`settings-dialog w-full max-w-2xl rounded-t-2xl border ${BORDER_SUBTLE} ${CARD_BG} p-5 shadow-xl sm:rounded-2xl sm:p-6`}>
+                <div className="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <div className={`${MONO} text-xs uppercase tracking-widest ${BRAND_TEXT}`}>Model inputs</div>
+                        <h2 id="settings-title" className={`mt-1 text-xl font-semibold ${TEXT_PRIMARY}`}>Facility settings</h2>
+                    </div>
+                    <button type="button" onClick={onClose} aria-label="Close settings" className={`rounded-lg border ${BORDER_SUBTLE} ${CHIP_BG} px-3 py-1.5 text-sm ${TEXT_BODY}`}>Close</button>
+                </div>
+
+                <div className="space-y-5">
+                    <fieldset>
+                        <legend className={`${MONO} mb-2 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>Facility size</legend>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {SIZES.map((size, index) => (
+                                <button key={size.id} type="button" onClick={() => actions.setSize(index)} aria-pressed={state.sizeIdx === index} className={`rounded-lg border px-3 py-2 text-sm font-medium ${state.sizeIdx === index ? 'border-emerald-700 bg-emerald-700 text-white' : `${BORDER_SUBTLE} ${CHIP_BG} ${TEXT_BODY}`}`}>
+                                    {size.label}<span className={`${MONO} ml-1 text-xs opacity-70`}>{size.sub}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend className={`${MONO} mb-2 text-xs uppercase tracking-wider ${TEXT_MUTED}`}>Carbon price</legend>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {CPS.map((price, index) => (
+                                <button key={price.l} type="button" onClick={() => actions.setCarbonPrice(index)} aria-pressed={state.carbonPriceIdx === index} className={`${MONO} rounded-lg border px-3 py-2 text-sm ${state.carbonPriceIdx === index ? 'border-emerald-700 bg-emerald-700 text-white' : `${BORDER_SUBTLE} ${CHIP_BG} ${TEXT_BODY}`}`}>
+                                    {price.l}
+                                </button>
+                            ))}
+                        </div>
+                    </fieldset>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label className={`grid gap-1.5 text-sm ${TEXT_BODY}`}>Budget ($M)
+                            <input type="number" step="0.5" value={state.budgetLimit / 1_000_000} onChange={(e) => actions.setBudgetLimit((parseFloat(e.target.value) || 0) * 1_000_000)} className={`rounded-lg border ${BORDER_STRONG} ${CHIP_BG} px-3 py-2 ${TEXT_PRIMARY}`} />
+                        </label>
+                        <label className={`grid gap-1.5 text-sm ${TEXT_BODY}`}>Decarbonization target (%)
+                            <input type="number" step="5" value={state.targetDecarbonization} onChange={(e) => actions.setTargetDecarbonization(parseFloat(e.target.value) || 0)} className={`rounded-lg border ${BORDER_STRONG} ${CHIP_BG} px-3 py-2 ${TEXT_PRIMARY}`} />
+                        </label>
+                    </div>
+
+                    <label className={`grid gap-1.5 text-sm ${TEXT_BODY}`}>Region
+                        <select value={state.region} onChange={(e) => actions.setRegion(e.target.value)} className={`rounded-lg border ${BORDER_STRONG} ${CHIP_BG} px-3 py-2 ${TEXT_PRIMARY}`}>
+                            {REGIONS.map((region) => <option key={region.id} value={region.id}>{region.label}</option>)}
+                        </select>
+                    </label>
+                </div>
+            </section>
+        </div>
+    );
+}
+
+function SettingsStrip({ state, actions, financials, activeRisks }) {
+    const [open, setOpen] = useState(false);
+    const size = SIZES[state.sizeIdx];
+    const carbonPrice = CPS[state.carbonPriceIdx];
+    const region = REGIONS.find((item) => item.id === state.region);
+    const regionShort = region?.label.split(' (')[0] || state.region;
+    const withinBudget = financials.capex <= state.budgetLimit;
+
+    return (
+        <>
+            <section className={`settings-strip rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} px-4 py-3`} aria-label="Current facility settings">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <p className={`min-w-0 flex-1 text-sm leading-relaxed ${TEXT_BODY}`}>
+                        <strong className={TEXT_PRIMARY}>{size.label}</strong> · {size.sub.replace('~', '')} · {formatUSD(state.budgetLimit)} budget · {state.targetDecarbonization}% target · {regionShort} · {carbonPrice.v ? `${carbonPrice.l} carbon` : 'No carbon price'}
+                    </p>
+                    <span className={`${MONO} rounded-full px-2.5 py-1 text-xs ${withinBudget && activeRisks.length === 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}>
+                        {withinBudget && activeRisks.length === 0 ? 'Configuration compliant' : `${activeRisks.length} risk${activeRisks.length === 1 ? '' : 's'}`}
+                    </span>
+                    <button type="button" onClick={() => setOpen(true)} className={`rounded-lg border ${BORDER_STRONG} ${CHIP_BG} px-3 py-1.5 text-sm font-semibold ${TEXT_PRIMARY}`}>Edit</button>
+                    <ResetButton onReset={actions.reset} />
+                </div>
+            </section>
+            {open && <SettingsModal state={state} actions={actions} onClose={() => setOpen(false)} />}
+        </>
+    );
+}
+
+function SandboxStats({ metrics, targetAchievedPct }) {
+    const stats = [
+        ['PUE', metrics.pue.value],
+        ['WUE', metrics.wue.value],
+        ['CO₂ / yr saved', `${metrics.co2}t`],
+        ['Target achieved', `${targetAchievedPct}%`],
+    ];
+    return (
+        <section className={`sandbox-stats grid grid-cols-2 overflow-hidden rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} sm:grid-cols-4`} aria-label="Live configuration metrics">
+            {stats.map(([label, value]) => (
+                <div key={label} className="sandbox-stat px-4 py-3 sm:px-5">
+                    <div className={`${MONO} text-xs uppercase tracking-wide ${TEXT_MUTED}`}>{label}</div>
+                    <div className={`${MONO} mt-1 text-xl font-semibold ${TEXT_PRIMARY}`}>{value}</div>
+                </div>
+            ))}
+        </section>
+    );
+}
+
+function UpgradeCounterList({ state, actions, placedUpgrades }) {
+    const counts = useMemo(() => Object.fromEntries(placedUpgrades.map((upgrade) => [upgrade.id, upgrade.qty || 1])), [placedUpgrades]);
+    const [filter, setFilter] = useState('all');
+    const visibleGroups = filter === 'all' ? SANDBOX_GROUPS : SANDBOX_GROUPS.filter((group) => group.id === filter);
+
+    return (
+        <section className={`upgrade-counter-panel rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4`} aria-labelledby="upgrade-counter-title">
+            <div className="mb-4">
+                <h2 id="upgrade-counter-title" className={`text-base font-semibold ${TEXT_PRIMARY}`}>Infrastructure upgrades</h2>
+                <p className={`mt-1 text-xs ${TEXT_MUTED}`}>Adjust quantities to update the model instantly.</p>
+            </div>
+            <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter upgrade categories">
+                {[{ id: 'all', label: 'All' }, ...SANDBOX_GROUPS].map((group) => (
+                    <button key={group.id} type="button" onClick={() => setFilter(group.id)} aria-pressed={filter === group.id} className={`${MONO} whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${filter === group.id ? 'border-emerald-700 bg-emerald-700 text-white' : `${BORDER_SUBTLE} ${CHIP_BG} ${TEXT_MUTED}`}`}>{group.label}</button>
+                ))}
+            </div>
+            <div className="space-y-5">
+                {visibleGroups.map((group) => (
+                    <div key={group.id}>
+                        <h3 className={`${MONO} mb-2 text-xs uppercase tracking-widest ${TEXT_MUTED}`}>{group.label}</h3>
+                        <div className={`divide-y ${BORDER_SUBTLE}`}>
+                            {group.upgrades.map((id) => {
+                                const upgrade = UPG.find((item) => item.id === id);
+                                if (!upgrade) return null;
+                                const count = counts[id] || 0;
+                                const max = getUpgradeMaxCount(id, state.sizeIdx);
+                                return (
+                                    <div key={id} className="upgrade-counter-row flex items-center gap-3 py-2.5">
+                                        <span className={`${MONO} inline-flex h-7 w-10 flex-shrink-0 items-center justify-center rounded-md text-xs font-bold`} style={{ background: upgrade.bg, color: upgrade.tc }}>{upgrade.abbr}</span>
+                                        <span className={`min-w-0 flex-1 truncate text-sm font-medium ${TEXT_PRIMARY}`}>{upgrade.name}</span>
+                                        <div className={`flex items-center rounded-lg border ${BORDER_SUBTLE} ${CHIP_BG}`} role="group" aria-label={`${upgrade.name} count, maximum ${max}`}>
+                                            <button type="button" onClick={() => actions.setUpgradeCount(id, count - 1)} disabled={count === 0} aria-label={`Remove one ${upgrade.name}`} className={`h-8 w-8 text-base disabled:opacity-35 ${TEXT_BODY}`}>−</button>
+                                            <output className={`${MONO} min-w-8 text-center text-sm font-semibold ${TEXT_PRIMARY}`} aria-live="polite">{count}</output>
+                                            <button type="button" onClick={() => actions.setUpgradeCount(id, count + 1)} disabled={count >= max} aria-label={`Add one ${upgrade.name}`} className={`h-8 w-8 text-base disabled:opacity-35 ${TEXT_BODY}`}>+</button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function DataCenterIllustration({ placedUpgrades }) {
+    const counts = Object.fromEntries(placedUpgrades.map((upgrade) => [upgrade.id, upgrade.qty || 1]));
+    const softwareCount = ['ai', 'virtual', 'iot', 'aithermal', 'WORKLOAD_ORCH'].reduce((total, id) => total + (counts[id] || 0), 0);
+    const solarPanels = Math.min(counts.solar || 0, 6);
+    return (
+        <section className={`facility-visual rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5`} aria-labelledby="facility-visual-title">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <div className={`${MONO} text-xs uppercase tracking-widest ${BRAND_TEXT}`}>Live facility model</div>
+                    <h2 id="facility-visual-title" className={`mt-1 text-lg font-semibold ${TEXT_PRIMARY}`}>Configured infrastructure</h2>
+                </div>
+                <span className={`${MONO} rounded-full ${CHIP_BG} px-2.5 py-1 text-xs ${TEXT_MUTED}`}>{placedUpgrades.reduce((total, item) => total + (item.qty || 1), 0)} assets</span>
+            </div>
+            <div className="iso-scene" aria-label="Isometric visualization of selected physical and software upgrades">
+                <div className="iso-ground" />
+                <div className="iso-building">
+                    <div className="iso-roof">
+                        <div className="solar-panel-grid">
+                            {Array.from({ length: solarPanels }, (_, index) => <i key={index} className="visual-upgrade" />)}
+                        </div>
+                    </div>
+                    <div className="iso-wall iso-wall-left"><i /><i /><i /></div>
+                    <div className="iso-wall iso-wall-right"><i /><i /><i /></div>
+                </div>
+                {(counts.battery || 0) > 0 && <div className="iso-unit iso-battery visual-upgrade"><b>BAT</b><span>{counts.battery}</span></div>}
+                {(counts.liquid || 0) > 0 && <div className="iso-unit iso-cooling visual-upgrade"><b>LQD</b><span>{counts.liquid}</span></div>}
+                {(counts.GEOTHERMAL_COOL || counts.freeair || counts.rdhx) && <div className="iso-unit iso-thermal visual-upgrade"><b>CLG</b><span>{(counts.GEOTHERMAL_COOL || 0) + (counts.freeair || 0) + (counts.rdhx || 0)}</span></div>}
+                {softwareCount > 0 && <div className="iso-software-badge visual-upgrade"><span aria-hidden="true">⌁</span><b>{softwareCount} software layer{softwareCount === 1 ? '' : 's'} active</b></div>}
+            </div>
+            <p className={`mt-2 text-center text-xs ${TEXT_MUTED}`}>Physical systems appear as quantities increase. Software layers are represented by the floating control badge.</p>
+        </section>
+    );
+}
+
+function SandboxView({ state, actions, metrics, financials, targetAchievedPct, placedUpgrades, activeRisks }) {
+    return (
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto pb-2">
+            <SettingsStrip state={state} actions={actions} financials={financials} activeRisks={activeRisks} />
+            <SandboxStats metrics={metrics} targetAchievedPct={targetAchievedPct} />
+            <div className="sandbox-configurator grid flex-1 grid-cols-1 gap-4 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.45fr)] 2xl:gap-6">
+                <UpgradeCounterList state={state} actions={actions} placedUpgrades={placedUpgrades} />
+                <DataCenterIllustration placedUpgrades={placedUpgrades} />
+            </div>
         </div>
     );
 }
@@ -1574,7 +1743,6 @@ export default function Page() {
         activeRisks,
         actions,
     } = useGameState();
-    const [selectedUpgradeId, setSelectedUpgradeId] = useState(null);
     const [activeTab, setActiveTab] = useState('sandbox');
     const [showWelcome, setShowWelcome] = useState(true);
 
@@ -1627,16 +1795,14 @@ export default function Page() {
             <div id="tabpanel-sandbox" role="tabpanel" aria-labelledby="tab-sandbox" hidden={activeTab !== 'sandbox'} className="contents">
                 {activeTab === 'sandbox' && (
                     <>
-                        <ControlBar state={state} actions={actions} financials={financials} targetAchievedPct={targetAchievedPct} />
-                        <RiskAuditBadge activeRisks={activeRisks} onViewResults={() => setActiveTab('results')} />
                         <SandboxView
                             state={state}
                             actions={actions}
                             metrics={metrics}
                             financials={financials}
                             targetAchievedPct={targetAchievedPct}
-                            selectedUpgradeId={selectedUpgradeId}
-                            setSelectedUpgradeId={setSelectedUpgradeId}
+                            placedUpgrades={placedUpgrades}
+                            activeRisks={activeRisks}
                         />
                     </>
                 )}

@@ -42,6 +42,21 @@ const COMPUTE_TO_POWER_RATIO = 3;
 const SOLAR_CURTAILMENT_THRESHOLD = 2;
 const CURTAILMENT_OFFSET_IDS = ['battery', 'WORKLOAD_ORCH'];
 
+const SIZE_COUNT_CAPS = [2, 4, 8, 12];
+const FIXED_UPGRADE_CAPS = {
+  SLAB_RETROFIT: 1,
+  WORKLOAD_ORCH: 1,
+  aithermal: 1,
+  virtual: 2,
+  GEOTHERMAL_COOL: 2,
+  GREYWATER_REC: 2,
+};
+
+export function getUpgradeMaxCount(upgradeId, sizeIdx) {
+  const facilityCap = SIZE_COUNT_CAPS[sizeIdx] || SIZE_COUNT_CAPS[1];
+  return Math.min(facilityCap, FIXED_UPGRADE_CAPS[upgradeId] || facilityCap);
+}
+
 export function validatePlacement(upgradeType, placedUpgrades) {
   if (upgradeType === 'AI_COMPUTE_RACK') {
     const hasCooling = placedUpgrades.some((u) => COOLING_FOR_COMPUTE.includes(u.id));
@@ -52,9 +67,13 @@ export function validatePlacement(upgradeType, placedUpgrades) {
       };
     }
 
-    const computeCountAfter = placedUpgrades.filter((u) => u.id === 'AI_COMPUTE_RACK').length + 1;
+    const computeCountAfter = placedUpgrades
+      .filter((u) => u.id === 'AI_COMPUTE_RACK')
+      .reduce((total, u) => total + (u.qty || 1), 1);
     const requiredPower = Math.floor(computeCountAfter / COMPUTE_TO_POWER_RATIO);
-    const powerCount = placedUpgrades.filter((u) => POWER_INFRA_IDS.includes(u.id)).length;
+    const powerCount = placedUpgrades
+      .filter((u) => POWER_INFRA_IDS.includes(u.id))
+      .reduce((total, u) => total + (u.qty || 1), 0);
     if (powerCount < requiredPower) {
       return {
         allowed: false,
@@ -354,6 +373,31 @@ function reducer(state, action) {
       return { ...state, qty: { ...state.qty, [upgradeId]: next } };
     }
 
+    case 'SET_UPGRADE_COUNT': {
+      const { upgrade, count } = action;
+      const grid = state.grid.slice();
+      const matching = [];
+      grid.forEach((item, index) => {
+        if (item?.id === upgrade.id) matching.push(index);
+      });
+
+      if (count <= 0) {
+        matching.forEach((index) => { grid[index] = null; });
+        return { ...state, grid };
+      }
+
+      const nextUpgrade = { ...upgrade, qty: count };
+      if (matching.length) {
+        grid[matching[0]] = nextUpgrade;
+        matching.slice(1).forEach((index) => { grid[index] = null; });
+      } else {
+        const emptyIndex = grid.findIndex((item) => item === null);
+        if (emptyIndex >= 0) grid[emptyIndex] = nextUpgrade;
+        else grid.push(nextUpgrade);
+      }
+      return { ...state, grid };
+    }
+
     case 'SET_DARK_FORCED':
       return { ...state, darkForced: action.darkForced };
 
@@ -568,8 +612,45 @@ export function useGameState(config) {
 
   const clearPlacementError = useCallback(() => setPlacementError(null), []);
 
+  const setUpgradeCount = useCallback(
+    (upgradeId, requestedCount) => {
+      const upgrade = UPG.find((u) => u.id === upgradeId);
+      if (!upgrade) return;
+
+      const current = placedUpgrades
+        .filter((u) => u.id === upgradeId)
+        .reduce((total, u) => total + (u.qty || 1), 0);
+      const max = getUpgradeMaxCount(upgradeId, state.sizeIdx);
+      const next = Math.max(0, Math.min(max, Number(requestedCount) || 0));
+      if (next === current) return;
+
+      if (next > current) {
+        const ruleCheck = validatePlacement(upgradeId, placedUpgrades);
+        if (!ruleCheck.allowed) {
+          setPlacementError(ruleCheck.reason);
+          return;
+        }
+
+        const addedUnits = next - current;
+        const prospectiveTotalCapex =
+          financials.upgradeCapex + upgrade.capex * addedUnits * size.fm + state.slotExpansionCost;
+        if (prospectiveTotalCapex > state.budgetLimit) {
+          setIsOverBudget(true);
+          setPlacementError('Budget Exceeded: this change would push total CapEx past your configured limit.');
+          return;
+        }
+      }
+
+      setIsOverBudget(false);
+      setPlacementError(null);
+      dispatch({ type: 'SET_UPGRADE_COUNT', upgrade, count: next });
+    },
+    [placedUpgrades, state.sizeIdx, state.slotExpansionCost, state.budgetLimit, financials.upgradeCapex, size.fm]
+  );
+
   const actions = {
     placeUpgrade,
+    setUpgradeCount,
     removeUpgrade,
     validatePlacement,
     clearPlacementError,

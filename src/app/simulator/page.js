@@ -1,8 +1,31 @@
 'use client';
 
 import { useState, useMemo, useEffect, useLayoutEffect } from 'react';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    RadialLinearScale,
+    PointElement,
+    LineElement,
+    Tooltip,
+    Filler,
+} from 'chart.js';
+import { Bar, Radar } from 'react-chartjs-2';
 import { useGameState, getQty, getUpgradeMaxCount } from '../../hooks/useGameState';
 import { UPG, SIZES, CPS, REGIONS, PEERS_PUE, PEERS_WUE } from '../../utils/constants';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    RadialLinearScale,
+    PointElement,
+    LineElement,
+    Tooltip,
+    Filler
+);
 
 const MONO = 'font-mono';
 
@@ -189,7 +212,7 @@ const TABS = [
 function TabBar({ activeTab, onChange, themeToggle }) {
     return (
         <nav aria-label="Platform views" className={`simulator-nav rounded-xl ${CARD_BG} border ${BORDER_SUBTLE} shadow-sm print:hidden`}>
-            <div className="flex flex-wrap items-center gap-3 px-3 pt-3 sm:flex-nowrap">
+            <div className="simulator-nav-inner flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap">
                 <a href="/" className="simulator-brand" aria-label="NetGrid Ops home">
                     <span className="simulator-brand-mark" aria-hidden="true"><i /><i /><i /><i /><b /></span>
                     <span>NetGrid Ops</span>
@@ -203,7 +226,7 @@ function TabBar({ activeTab, onChange, themeToggle }) {
                             aria-selected={activeTab === t.id}
                             aria-controls={`tabpanel-${t.id}`}
                             onClick={() => onChange(t.id)}
-                            className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === t.id
+                            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === t.id
                                 ? `${CHIP_BG} ${TEXT_PRIMARY}`
                                 : `${TEXT_MUTED} hover:text-slate-900 dark:hover:text-slate-100`
                                 }`}
@@ -212,9 +235,8 @@ function TabBar({ activeTab, onChange, themeToggle }) {
                         </button>
                     ))}
                 </div>
-                <div className="ml-auto pb-2">{themeToggle}</div>
+                <div className="ml-auto">{themeToggle}</div>
             </div>
-            <div className={`border-b ${BORDER_SUBTLE}`} />
         </nav>
     );
 }
@@ -866,26 +888,42 @@ function SettingsModal({ state, actions, onClose }) {
     );
 }
 
-function SettingsStrip({ state, actions, financials, activeRisks }) {
+function SettingsStrip({ state, actions, financials, activeRisks, metrics, targetAchievedPct }) {
     const [open, setOpen] = useState(false);
     const size = SIZES[state.sizeIdx];
     const carbonPrice = CPS[state.carbonPriceIdx];
     const region = REGIONS.find((item) => item.id === state.region);
     const regionShort = region?.label.split(' (')[0] || state.region;
     const withinBudget = financials.capex <= state.budgetLimit;
+    const stats = [
+        ['PUE', metrics.pue.value],
+        ['WUE', metrics.wue.value],
+        ['CO₂ / yr', `${metrics.co2}t`],
+        ['Target', `${targetAchievedPct}%`],
+    ];
 
     return (
         <>
             <section className={`settings-strip rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} px-4 py-3`} aria-label="Current facility settings">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <p className={`min-w-0 flex-1 text-sm leading-relaxed ${TEXT_BODY}`}>
+                <div className="combined-settings-row flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <p className={`settings-summary min-w-0 flex-1 text-sm leading-relaxed ${TEXT_BODY}`}>
                         <strong className={TEXT_PRIMARY}>{size.label}</strong> · {size.sub.replace('~', '')} · {formatUSD(state.budgetLimit)} budget · {state.targetDecarbonization}% target · {regionShort} · {carbonPrice.v ? `${carbonPrice.l} carbon` : 'No carbon price'}
                     </p>
+                    <div className="combined-live-stats flex items-center overflow-x-auto" aria-label="Live configuration metrics">
+                        {stats.map(([label, value]) => (
+                            <span key={label} className="combined-live-stat flex items-baseline gap-1.5 whitespace-nowrap px-3">
+                                <small className={`${MONO} uppercase tracking-wide ${TEXT_MUTED}`}>{label}:</small>
+                                <strong className={`${MONO} text-sm ${TEXT_PRIMARY}`}>{value}</strong>
+                            </span>
+                        ))}
+                    </div>
+                    <div className="settings-actions flex flex-wrap items-center gap-2">
                     <span className={`${MONO} rounded-full px-2.5 py-1 text-xs ${withinBudget && activeRisks.length === 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}>
                         {withinBudget && activeRisks.length === 0 ? 'Configuration compliant' : `${activeRisks.length} risk${activeRisks.length === 1 ? '' : 's'}`}
                     </span>
                     <button type="button" onClick={() => setOpen(true)} className={`rounded-lg border ${BORDER_STRONG} ${CHIP_BG} px-3 py-1.5 text-sm font-semibold ${TEXT_PRIMARY}`}>Edit</button>
                     <ResetButton onReset={actions.reset} />
+                    </div>
                 </div>
             </section>
             {open && <SettingsModal state={state} actions={actions} onClose={() => setOpen(false)} />}
@@ -901,11 +939,11 @@ function SandboxStats({ metrics, targetAchievedPct }) {
         ['Target achieved', `${targetAchievedPct}%`],
     ];
     return (
-        <section className={`sandbox-stats grid grid-cols-2 overflow-hidden rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} sm:grid-cols-4`} aria-label="Live configuration metrics">
+        <section className={`sandbox-stats flex overflow-x-auto rounded-xl border ${BORDER_SUBTLE} ${CARD_BG}`} aria-label="Live configuration metrics">
             {stats.map(([label, value]) => (
-                <div key={label} className="sandbox-stat px-4 py-3 sm:px-5">
-                    <div className={`${MONO} text-xs uppercase tracking-wide ${TEXT_MUTED}`}>{label}</div>
-                    <div className={`${MONO} mt-1 text-xl font-semibold ${TEXT_PRIMARY}`}>{value}</div>
+                <div key={label} className="sandbox-stat flex min-w-max flex-1 items-baseline justify-center gap-2 whitespace-nowrap px-4 py-3">
+                    <span className={`${MONO} text-xs uppercase tracking-wide ${TEXT_MUTED}`}>{label}:</span>
+                    <strong className={`${MONO} text-lg font-semibold ${TEXT_PRIMARY}`}>{value}</strong>
                 </div>
             ))}
         </section>
@@ -918,7 +956,7 @@ function UpgradeCounterList({ state, actions, placedUpgrades }) {
     const visibleGroups = filter === 'all' ? SANDBOX_GROUPS : SANDBOX_GROUPS.filter((group) => group.id === filter);
 
     return (
-        <section className={`upgrade-counter-panel rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4`} aria-labelledby="upgrade-counter-title">
+        <section className={`upgrade-counter-panel flex flex-col rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-4`} aria-labelledby="upgrade-counter-title">
             <div className="mb-4">
                 <h2 id="upgrade-counter-title" className={`text-base font-semibold ${TEXT_PRIMARY}`}>Infrastructure upgrades</h2>
                 <p className={`mt-1 text-xs ${TEXT_MUTED}`}>Adjust quantities to update the model instantly.</p>
@@ -928,7 +966,7 @@ function UpgradeCounterList({ state, actions, placedUpgrades }) {
                     <button key={group.id} type="button" onClick={() => setFilter(group.id)} aria-pressed={filter === group.id} className={`${MONO} whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${filter === group.id ? 'border-emerald-700 bg-emerald-700 text-white' : `${BORDER_SUBTLE} ${CHIP_BG} ${TEXT_MUTED}`}`}>{group.label}</button>
                 ))}
             </div>
-            <div className="space-y-5">
+            <div className="upgrade-counter-scroll min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-live="polite">
                 {visibleGroups.map((group) => (
                     <div key={group.id}>
                         <h3 className={`${MONO} mb-2 text-xs uppercase tracking-widest ${TEXT_MUTED}`}>{group.label}</h3>
@@ -958,48 +996,189 @@ function UpgradeCounterList({ state, actions, placedUpgrades }) {
     );
 }
 
-function DataCenterIllustration({ placedUpgrades }) {
-    const counts = Object.fromEntries(placedUpgrades.map((upgrade) => [upgrade.id, upgrade.qty || 1]));
-    const softwareCount = ['ai', 'virtual', 'iot', 'aithermal', 'WORKLOAD_ORCH'].reduce((total, id) => total + (counts[id] || 0), 0);
-    const solarPanels = Math.min(counts.solar || 0, 6);
+function FacilityWarnings({ activeRisks, placementError, curtailmentWarning, onDismissError }) {
+    const messages = [
+        ...(placementError ? [{ id: 'placement', severity: 'error', title: 'Configuration blocked', message: placementError }] : []),
+        ...(curtailmentWarning ? [{ id: 'curtailment', severity: 'warning', title: 'Grid curtailment', message: curtailmentWarning }] : []),
+        ...activeRisks
+            .filter((risk) => !(curtailmentWarning && risk.id === 'grid-power'))
+            .map((risk) => ({ id: risk.id, severity: risk.severity === 'CRITICAL' ? 'error' : 'warning', title: risk.title, message: risk.message })),
+    ];
+
+    return (
+        <div className="facility-warning-area" aria-live="polite">
+            <div className="facility-warning-heading">
+                <span>System status</span>
+                <b>{messages.length ? `${messages.length} warning${messages.length === 1 ? '' : 's'}` : 'No active warnings'}</b>
+            </div>
+            {messages.length ? (
+                <div className="facility-warning-list">
+                    {messages.map((item) => (
+                        <div key={item.id} className={`facility-warning ${item.severity === 'error' ? 'is-error' : 'is-warning'}`} role={item.severity === 'error' ? 'alert' : 'status'}>
+                            <span aria-hidden="true">{item.severity === 'error' ? '!' : '△'}</span>
+                            <div><b>{item.title}</b><p>{item.message}</p></div>
+                            {item.id === 'placement' && <button type="button" onClick={onDismissError} aria-label="Dismiss configuration warning">×</button>}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="facility-all-clear"><span aria-hidden="true">✓</span> Architecture and configured constraints are currently aligned.</p>
+            )}
+        </div>
+    );
+}
+
+function DataCenterIllustration({ placedUpgrades, activeRisks, placementError, curtailmentWarning, onDismissError, state, metrics, financials, targetAchievedPct, theme }) {
+    const isDark = theme === 'dark';
+    const chartColors = isDark
+        ? {
+            text: '#cad8cd', muted: '#9daf9f', grid: '#315542', surface: '#0b261a',
+            energy: '#6fae7e', cooling: '#9bc4a4', structural: '#c49a78', compute: '#4d8a61', software: '#8dad96', unspent: '#315542',
+        }
+        : {
+            text: '#173a2c', muted: '#66786d', grid: '#c8d2c4', surface: '#fffdf8',
+            energy: '#1f5c34', cooling: '#6f9b79', structural: '#9a7354', compute: '#43815a', software: '#9ab5a0', unspent: '#dbe9dc',
+        };
+
+    const categoryMeta = [
+        { id: 'energy', label: 'Energy', color: chartColors.energy },
+        { id: 'cooling', label: 'Cooling', color: chartColors.cooling },
+        { id: 'structural', label: 'Structural', color: chartColors.structural },
+        { id: 'compute', label: 'Compute', color: chartColors.compute },
+        { id: 'software', label: 'Software', color: chartColors.software },
+    ];
+    const sizeMultiplier = SIZES[state.sizeIdx].fm;
+    const categorySpend = categoryMeta.map((category) => {
+        const group = SANDBOX_GROUPS.find((item) => item.id === category.id);
+        const amount = placedUpgrades
+            .filter((upgrade) => group?.upgrades.includes(upgrade.id))
+            .reduce((total, upgrade) => total + upgrade.capex * (upgrade.qty || 1) * sizeMultiplier, 0);
+        return { ...category, amount };
+    });
+    const categorizedSpend = categorySpend.reduce((total, category) => total + category.amount, 0);
+    const unspent = Math.max(0, state.budgetLimit - categorizedSpend);
+    const spentPct = state.budgetLimit > 0 ? Math.min(100, (categorizedSpend / state.budgetLimit) * 100) : 0;
+    const budgetEfficiency = categorizedSpend > 0
+        ? Math.min(100, Math.round((targetAchievedPct / Math.max(1, spentPct)) * 100))
+        : 0;
+
+    const budgetData = {
+        labels: ['Budget'],
+        datasets: [
+            ...categorySpend.map((category) => ({
+                label: category.label,
+                data: [category.amount],
+                backgroundColor: category.color,
+                borderWidth: 0,
+                barThickness: 28,
+            })),
+            { label: 'Unspent', data: [unspent], backgroundColor: chartColors.unspent, borderWidth: 0, barThickness: 28 },
+        ],
+    };
+    const budgetOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        animation: { duration: 260 },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: { label: (context) => `${context.dataset.label}: ${formatUSD(context.raw)}` },
+            },
+        },
+        scales: {
+            x: { stacked: true, display: false, max: Math.max(state.budgetLimit, categorizedSpend, 1) },
+            y: { stacked: true, display: false },
+        },
+    };
+
+    const radarValues = [
+        Math.round(metrics.pue.barPct),
+        Math.round(metrics.wue.barPct),
+        targetAchievedPct,
+        budgetEfficiency,
+    ];
+    const radarData = {
+        labels: ['PUE improvement', 'WUE improvement', 'CO₂ reduction', 'Budget efficiency'],
+        datasets: [{
+            label: 'Current configuration',
+            data: radarValues,
+            borderColor: chartColors.energy,
+            backgroundColor: isDark ? 'rgba(111,174,126,.2)' : 'rgba(31,92,52,.15)',
+            pointBackgroundColor: chartColors.structural,
+            pointBorderColor: chartColors.surface,
+            pointRadius: 3,
+            borderWidth: 2,
+            fill: true,
+        }],
+    };
+    const radarOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 260 },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.raw}%` } } },
+        scales: {
+            r: {
+                min: 0, max: 100, beginAtZero: true,
+                ticks: { display: false, stepSize: 25 },
+                grid: { color: chartColors.grid },
+                angleLines: { color: chartColors.grid },
+                pointLabels: { color: chartColors.text, font: { size: 10, family: 'monospace' } },
+            },
+        },
+    };
+
     return (
         <section className={`facility-visual rounded-xl border ${BORDER_SUBTLE} ${CARD_BG} p-5`} aria-labelledby="facility-visual-title">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <div className={`${MONO} text-xs uppercase tracking-widest ${BRAND_TEXT}`}>Live facility model</div>
-                    <h2 id="facility-visual-title" className={`mt-1 text-lg font-semibold ${TEXT_PRIMARY}`}>Configured infrastructure</h2>
+                    <h2 id="facility-visual-title" className={`text-lg font-semibold ${TEXT_PRIMARY}`}>Live Facility Model</h2>
+                    <p className={`mt-1 text-xs ${TEXT_MUTED}`}>{placedUpgrades.length} system{placedUpgrades.length === 1 ? '' : 's'} configured.</p>
                 </div>
-                <span className={`${MONO} rounded-full ${CHIP_BG} px-2.5 py-1 text-xs ${TEXT_MUTED}`}>{placedUpgrades.reduce((total, item) => total + (item.qty || 1), 0)} assets</span>
+                <span className={`${MONO} rounded-full ${CHIP_BG} px-2.5 py-1 text-xs ${TEXT_MUTED}`}>{Math.round(spentPct)}% deployed</span>
             </div>
-            <div className="iso-scene" aria-label="Isometric visualization of selected physical and software upgrades">
-                <div className="iso-ground" />
-                <div className="iso-building">
-                    <div className="iso-roof">
-                        <div className="solar-panel-grid">
-                            {Array.from({ length: solarPanels }, (_, index) => <i key={index} className="visual-upgrade" />)}
-                        </div>
+
+            <div className="tradeoff-charts">
+                <div className="budget-allocation-block">
+                    <div className="chart-section-heading">
+                        <div><span>Budget allocation</span><b>{formatUSD(categorizedSpend)} of {formatUSD(state.budgetLimit)}</b></div>
+                        <small>{formatUSD(unspent)} unspent</small>
                     </div>
-                    <div className="iso-wall iso-wall-left"><i /><i /><i /></div>
-                    <div className="iso-wall iso-wall-right"><i /><i /><i /></div>
+                    <div className="budget-chart" role="img" aria-label={`Budget allocation: ${formatUSD(categorizedSpend)} spent of ${formatUSD(state.budgetLimit)}`}>
+                        <Bar data={budgetData} options={budgetOptions} />
+                    </div>
+                    <div className="budget-legend">
+                        {[...categorySpend, { id: 'unspent', label: 'Unspent', color: chartColors.unspent, amount: unspent }].map((category) => (
+                            <span key={category.id}><i style={{ backgroundColor: category.color }} /><b>{category.label}</b><em>{formatUSD(category.amount)}</em></span>
+                        ))}
+                    </div>
                 </div>
-                {(counts.battery || 0) > 0 && <div className="iso-unit iso-battery visual-upgrade"><b>BAT</b><span>{counts.battery}</span></div>}
-                {(counts.liquid || 0) > 0 && <div className="iso-unit iso-cooling visual-upgrade"><b>LQD</b><span>{counts.liquid}</span></div>}
-                {(counts.GEOTHERMAL_COOL || counts.freeair || counts.rdhx) && <div className="iso-unit iso-thermal visual-upgrade"><b>CLG</b><span>{(counts.GEOTHERMAL_COOL || 0) + (counts.freeair || 0) + (counts.rdhx || 0)}</span></div>}
-                {softwareCount > 0 && <div className="iso-software-badge visual-upgrade"><span aria-hidden="true">⌁</span><b>{softwareCount} software layer{softwareCount === 1 ? '' : 's'} active</b></div>}
+
+                <div className="radar-tradeoff-block">
+                    <div className="chart-section-heading">
+                        <div><span>Configuration tradeoffs</span><b>Normalized performance</b></div>
+                        <small>0–100%</small>
+                    </div>
+                    <div className="radar-chart" role="img" aria-label={`Tradeoff chart: PUE ${radarValues[0]}%, WUE ${radarValues[1]}%, carbon ${radarValues[2]}%, budget efficiency ${radarValues[3]}%`}>
+                        <Radar data={radarData} options={radarOptions} />
+                    </div>
+                    <div className="radar-values">
+                        {radarData.labels.map((label, index) => <span key={label}><b>{label}</b><em>{radarValues[index]}%</em></span>)}
+                    </div>
+                </div>
             </div>
-            <p className={`mt-2 text-center text-xs ${TEXT_MUTED}`}>Physical systems appear as quantities increase. Software layers are represented by the floating control badge.</p>
+            <FacilityWarnings activeRisks={activeRisks} placementError={placementError} curtailmentWarning={curtailmentWarning} onDismissError={onDismissError} />
         </section>
     );
 }
 
-function SandboxView({ state, actions, metrics, financials, targetAchievedPct, placedUpgrades, activeRisks }) {
+function SandboxView({ state, actions, metrics, financials, targetAchievedPct, placedUpgrades, activeRisks, placementError, curtailmentWarning, theme }) {
     return (
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto pb-2">
-            <SettingsStrip state={state} actions={actions} financials={financials} activeRisks={activeRisks} />
-            <SandboxStats metrics={metrics} targetAchievedPct={targetAchievedPct} />
+            <SettingsStrip state={state} actions={actions} financials={financials} activeRisks={activeRisks} metrics={metrics} targetAchievedPct={targetAchievedPct} />
             <div className="sandbox-configurator grid flex-1 grid-cols-1 gap-4 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.45fr)] 2xl:gap-6">
                 <UpgradeCounterList state={state} actions={actions} placedUpgrades={placedUpgrades} />
-                <DataCenterIllustration placedUpgrades={placedUpgrades} />
+                <DataCenterIllustration placedUpgrades={placedUpgrades} activeRisks={activeRisks} placementError={placementError} curtailmentWarning={curtailmentWarning} onDismissError={actions.clearPlacementError} state={state} metrics={metrics} financials={financials} targetAchievedPct={targetAchievedPct} theme={theme} />
             </div>
         </div>
     );
@@ -1789,8 +1968,8 @@ export default function Page() {
                 themeToggle={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
             />
 
-            <RejectionBanner message={placementError} onDismiss={actions.clearPlacementError} />
-            <CurtailmentBanner message={curtailmentWarning} />
+            {activeTab !== 'sandbox' && <RejectionBanner message={placementError} onDismiss={actions.clearPlacementError} />}
+            {activeTab !== 'sandbox' && <CurtailmentBanner message={curtailmentWarning} />}
 
             <div id="tabpanel-sandbox" role="tabpanel" aria-labelledby="tab-sandbox" hidden={activeTab !== 'sandbox'} className="contents">
                 {activeTab === 'sandbox' && (
@@ -1803,6 +1982,9 @@ export default function Page() {
                             targetAchievedPct={targetAchievedPct}
                             placedUpgrades={placedUpgrades}
                             activeRisks={activeRisks}
+                            placementError={placementError}
+                            curtailmentWarning={curtailmentWarning}
+                            theme={theme}
                         />
                     </>
                 )}

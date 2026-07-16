@@ -180,7 +180,7 @@ export default function Home() {
       </section>
 
       <footer>
-          <a className="brand brand--footer" href="#top"><BrandMark />NetGrid Ops</a>
+        <a className="brand brand--footer" href="#top"><BrandMark />NetGrid Ops</a>
         <p>Compute Infrastructure Sustainability Optimizer</p>
         <p>Built to explore better infrastructure decisions.</p>
       </footer>
